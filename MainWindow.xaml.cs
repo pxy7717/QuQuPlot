@@ -7,13 +7,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Threading;
 using System.Windows.Input;
-// using QuquPlot.Utils;
-using ScottPlot;
-// using CsvHelper;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Data;
-// using ClosedXML.Excel;
 using MediaColor = System.Windows.Media.Color;
 using QuquPlot.Models;
 using System.Collections.ObjectModel;
@@ -23,17 +19,16 @@ using ExcelDataReader;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Win32;
+using ScottPlot;
 using ScottPlot.WPF;
 using Color = System.Windows.Media.Color;
 using System.Windows.Documents;
+using QuquPlot.Utils;
 
 namespace QuquPlot
 {
     public partial class MainWindow : Window
     {
-        private const int COLOR_BLOCK_SIZE = 25;  // 色块尺寸
-        private const int COLOR_PANEL_WIDTH = 150;  // 调色板宽度 (6 * 25)
-        private const int COLOR_PANEL_HEIGHT = 150;  // 调色板高度 (6 * 25)
 #if DEBUG
         private bool SHOW_DEBUG_PANEL = true;
 #else
@@ -49,31 +44,7 @@ namespace QuquPlot
         private RowDefinition? plotRowDef;
         private RowDefinition? curveListRowDef;
 
-        private readonly string[] _colorPalette = new string[]
-        {
-            "#D32F2F", "#FF5252", "#FF8A80", "#1976D2", "#448AFF", "#82B1FF",
-            "#00C853", "#69F0AE", "#B9F6CA", "#9C27B0", "#CE93D8", "#E1BEE7",
-            "#FBC02D", "#FFEB3B", "#FFF59D", "#0097A7", "#4DD0E1", "#B2EBF2",
-            "#F57C00", "#FFB74D", "#FFE0B2", "#C2185B", "#F48FB1", "#F8BBD0",
-            "#5D4037", "#A1887F", "#D7CCC8", "#303F9F", "#7986CB", "#C5CAE9",
-            "#212121", "#616161", "#9E9E9E", "#BDBDBD", "#EEEEEE", "#FAFAFA"
-        };
-
-        // 工具方法：将hex字符串转为ScottPlot.Color
-        private static ScottPlot.Color ColorFromHex(string hex, double alpha = 1.0)
-        {
-            hex = hex.Replace("#", "");
-            byte a = (byte)(255 * alpha);
-            int start = 0;
-            if (hex.Length == 8) { a = Convert.ToByte(hex.Substring(0, 2), 16); start = 2; }
-            byte r = Convert.ToByte(hex.Substring(start, 2), 16);
-            byte g = Convert.ToByte(hex.Substring(start + 2, 2), 16);
-            byte b = Convert.ToByte(hex.Substring(start + 4, 2), 16);
-            // Convert byte values (0-255) to float values (0-1) for ScottPlot.Color
-            return new ScottPlot.Color(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
-        }
-
-        private double _lastSplitterPosition = 0.5; // 默认30%的宽度给设置面板
+        private double _lastSplitterPosition = 0.5; // 默认50%的宽度给设置面板
 
         private Point _dragStartPoint;
         private int _insertionIndex = -1;
@@ -84,6 +55,11 @@ namespace QuquPlot
         private bool _isColorBlockDrag = false;
         private Border? _pendingColorBlock = null;
         private MouseButtonEventArgs? _pendingColorBlockEventArgs = null;
+        private ScottPlot.Plottables.Annotation mouseCoordLabel = null!;
+
+        private ScottPlot.Plottables.Crosshair crosshair = null!;
+        private bool enableCrosshair = false;
+        private bool _isLoaded = false;
 
         public MainWindow()
         {
@@ -100,25 +76,6 @@ namespace QuquPlot
             plotRowDef = (PlotView.Parent as Grid)?.RowDefinitions[0];
             curveListRowDef = (PlotView.Parent as Grid)?.RowDefinitions[2];
 
-            // 订阅曲线信息变化事件
-            _curveInfos.CollectionChanged += (s, e) =>
-            {
-                if (e.NewItems != null)
-                {
-                    foreach (CurveInfo info in e.NewItems)
-                    {
-                        info.PropertyChanged += CurveInfo_PropertyChanged;
-                    }
-                }
-                if (e.OldItems != null)
-                {
-                    foreach (CurveInfo info in e.OldItems)
-                    {
-                        info.PropertyChanged -= CurveInfo_PropertyChanged;
-                    }
-                }
-            };
-
             // 1. 创建 FontStyler 实例
             var fontStyler = new ScottPlot.Stylers.FontStyler(PlotView!.Plot);
 
@@ -130,25 +87,78 @@ namespace QuquPlot
 
             this.Loaded += (s, e) =>
             {
+                _isLoaded = true;
                 PlotView!.Plot.Clear();
 
                 // 恢复坐标轴字体设置
-                PlotView.Plot.Axes.Bottom.Label.FontSize = 32;
-                PlotView.Plot.Axes.Left.Label.FontSize = 32;
-                PlotView.Plot.Axes.Bottom.TickLabelStyle.FontSize = 28;
-                PlotView.Plot.Axes.Left.TickLabelStyle.FontSize = 28;
+                PlotUtils.SetAxisFonts(PlotView.Plot, 32, 28);
+
+                // 设置表格四周的padding
+                // 顺序是左右下上
+                PixelPadding padding = new(150, 100, 150, 100);
+                PlotView.Plot.Layout.Fixed(padding);
+
+                // 设置（垂直于）x轴grid样式
+                var xAxisGridStyle = new ScottPlot.GridStyle();
+                xAxisGridStyle.IsVisible = true;
+                xAxisGridStyle.MajorLineStyle.Width = 2;
+                xAxisGridStyle.MajorLineStyle.Color = ColorUtils.ColorFromHex("#2B2B2B", 0.2);
+                xAxisGridStyle.MinorLineStyle.Width = 0;
+                xAxisGridStyle.MinorLineStyle.Color = ColorUtils.ColorFromHex("#2B2B2B", 0.5);
+                xAxisGridStyle.IsBeneathPlottables = true;
+
+                var yAxisGridStyle = new ScottPlot.GridStyle();
+                yAxisGridStyle.IsVisible = true;
+                yAxisGridStyle.MajorLineStyle.Width = 2;
+                yAxisGridStyle.MajorLineStyle.Color = ColorUtils.ColorFromHex("#2B2B2B", 0.1);
+                yAxisGridStyle.MinorLineStyle.Width = 0;
+                yAxisGridStyle.MinorLineStyle.Color = ColorUtils.ColorFromHex("#2B2B2B", 0.5);
+                yAxisGridStyle.IsBeneathPlottables = true;
+                
+                // 应用x轴grid样式
+                PlotView.Plot.Grid.XAxisStyle = xAxisGridStyle;
+                PlotView.Plot.Grid.YAxisStyle = yAxisGridStyle;
 
                 // 恢复图例设置
-                PlotView.Plot.Legend.FontSize = 28;
-                PlotView.Plot.Legend.BackgroundColor = ColorFromHex("#F2F2F2", 0.8);
-                PlotView.Plot.Legend.ShadowColor = ColorFromHex("#FFFFFF", 0.0);
-                PlotView.Plot.Legend.OutlineColor = ColorFromHex("#FFFFFF", 0.0);
+                PlotUtils.SetLegendStyle(PlotView.Plot, 28, ColorUtils.ColorFromHex("#F2F2F2", 0.8));
 
-                // 禁用右键缩放
-                // var uip = PlotView.UserInputProcessor;
-                // uip.RightClickDragZoom(false);
+                var uip = PlotView.UserInputProcessor;
+                uip.DoubleLeftClickBenchmark(false);
+
+                // 先移除右键右键缩放
+                uip.RightClickDragZoom(false);
+                
+                // 将左键拖拽改为右键拖拽
+                var panResponse = uip.UserActionResponses
+                    .OfType<ScottPlot.Interactivity.UserActionResponses.MouseDragPan>()
+                    .FirstOrDefault();
+
+                if (panResponse != null)
+                {
+                    uip.UserActionResponses.Remove(panResponse);
+                    // 例如修改 Button
+                    var panButton = ScottPlot.Interactivity.StandardMouseButtons.Right;
+                    panResponse = new ScottPlot.Interactivity.UserActionResponses.MouseDragPan(panButton);
+                    uip.UserActionResponses.Add(panResponse);
+                }
+
+                // 添加鼠标移动事件，用于刷新坐标
+                PlotView.MouseMove += PlotView_MouseMove_ScottPlot;
+                // 设置crosshair
+                crosshair = PlotView.Plot.Add.Crosshair(0, 0);
+                crosshair.IsVisible = enableCrosshair;
+                crosshair.LineWidth = 1;
+                crosshair.LineColor = ColorUtils.ColorFromHex("#8A8A8A", 0.8);
+                
+                // 设置图例
 
                 PlotView.Plot.Legend.Alignment = ScottPlot.Alignment.LowerLeft;
+                mouseCoordLabel = PlotView.Plot.Add.Annotation("", ScottPlot.Alignment.UpperLeft);
+                mouseCoordLabel.LabelBorderWidth = 0;
+                mouseCoordLabel.LabelBackgroundColor = ColorUtils.ColorFromHex("#FAFAFA", 0.0);
+                mouseCoordLabel.LabelFontColor = ColorUtils.ColorFromHex("#9b9b9b", 1.0);
+                mouseCoordLabel.LabelShadowColor = ColorUtils.ColorFromHex("#000000", 0.0);
+                mouseCoordLabel.LabelFontSize = 35;
                 PlotView.Refresh();
 
                 // 设置初始状态：隐藏曲线设置面板
@@ -187,13 +197,14 @@ namespace QuquPlot
             this.DragEnter += MainWindow_DragEnter;
             this.DragOver += MainWindow_DragOver;
             this.Drop += MainWindow_Drop;
-        }    
+        }
+
 
         private void OpenFileButton_Click(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "数据文件|*.csv;*.xls;*.xlsx;*.txt|CSV文件|*.csv|Excel文件|*.xls;*.xlsx|文本文件|*.txt|所有文件|*.*",
+                Filter = "数据文件|*.csv;*.xls;*.xlsx;*.txt;*.s;*.s2p;*.s3p;*.s4p|CSV文件|*.csv|Excel文件|*.xls;*.xlsx|文本文件|*.txt|S参数文件|*.s;*.s2p;*.s3p;*.s4p|所有文件|*.*",
                 Multiselect = true
             };
 
@@ -203,20 +214,7 @@ namespace QuquPlot
                 {
                     foreach (var filePath in openFileDialog.FileNames)
                     {
-                        string fileExtension = System.IO.Path.GetExtension(filePath).ToLower();
-
-                        if (fileExtension == ".csv")
-                        {
-                            ProcessDataFile(filePath);
-                        }
-                        else if (fileExtension == ".xls" || fileExtension == ".xlsx")
-                        {
-                            LoadExcelFile(filePath);
-                        }
-                        else if (fileExtension == ".txt")
-                        {
-                            LoadTxtFile(filePath);
-                        }
+                        ProcessFile(filePath);
                     }
                 }
                 catch (Exception ex)
@@ -226,334 +224,97 @@ namespace QuquPlot
             }
         }
 
-        private void LoadTxtFile(string filePath)
+        private void ProcessFile(string filePath)
         {
-            AppendDebugInfo($"开始加载TXT文件: {filePath}");
-            
-            // 读取文件内容
-            var lines = File.ReadAllLines(filePath);
-            if (lines.Length == 0)
-                {
-                AppendDebugInfo("文件为空");
-                return;
-            }
+            string fileExtension = FileUtils.GetFileExtension(filePath);
+            List<string> processedLines;
 
-            // 检测分隔符
-            var delimiter = DetectDelimiter(lines);
-            if (delimiter == null)
+            switch (fileExtension)
+            {
+                case ".csv":
+                    processedLines = FileUtils.ProcessCsvFile(filePath, AppendDebugInfo);
+                    break;
+                case ".xls":
+                case ".xlsx":
+                    processedLines = FileUtils.ProcessExcelFile(filePath, AppendDebugInfo);
+                    break;
+                case ".txt":
+                    processedLines = FileUtils.ProcessTxtFile(filePath, AppendDebugInfo);
+                    break;
+                case ".s":
+                case ".s2p":
+                case ".s3p":
+                case ".s4p":
+                    // S参数文件专用解析
+                    try
+                    {
+                        var sparam = QuquPlot.Models.SParameterFileParser.ParseFile(filePath);
+                        AppendDebugInfo($"S参数文件解析成功，频点数: {sparam.Frequencies.Count}");
+                        foreach (var kv in sparam.Magnitudes)
                         {
-                // 如果没有检测到分隔符，尝试按空格分割
-                delimiter = " ";
+                            var ys = kv.Value.ToArray();
+                            var xs = sparam.Frequencies.ToArray();
+                            var label = kv.Key;
+                            AddCurveToPlot(label, xs, ys, filePath, true);
                         }
-
-            // 将数据转换为标准格式
-            var processedLines = new List<string>();
-            foreach (var line in lines)
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                
-                // 分割行并去除空白
-                var parts = line.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries)
-                               .Select(p => p.Trim())
-                               .Where(p => !string.IsNullOrWhiteSpace(p))
-                               .ToList();
-                
-                if (parts.Count > 0)
-                {
-                    processedLines.Add(string.Join(",", parts));
-                }
-            }
-
-            // 直接处理数据
-            ProcessDataLines(processedLines, Path.GetFileName(filePath));
-        }
-
-        private void LoadExcelFile(string filePath)
-        {
-            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read);
-            using var reader = ExcelDataReader.ExcelReaderFactory.CreateReader(stream);
-            var result = reader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration()
-            {
-                ConfigureDataTable = (_) => new ExcelDataReader.ExcelDataTableConfiguration
-                {
-                    UseHeaderRow = true
-                }
-            });
-
-            if (result.Tables.Count == 0)
-            {
-                AppendDebugInfo("Excel文件中没有找到数据表");
-                return;
-            }
-
-            var dataTable = result.Tables[0];
-            AppendDebugInfo($"读取到数据表: {dataTable.TableName}");
-            AppendDebugInfo($"列数: {dataTable.Columns.Count}, 行数: {dataTable.Rows.Count}");
-
-            // 将Excel数据转换为标准格式
-            var processedLines = new List<string>();
-            
-            // 添加表头
-            var headers = new List<string>();
-            for (int i = 0; i < dataTable.Columns.Count; i++)
-            {
-                var columnName = dataTable.Columns[i].ColumnName;
-                headers.Add(columnName ?? $"列{i+1}");
-            }
-            processedLines.Add(string.Join(",", headers));
-
-            // 添加数据行
-            foreach (System.Data.DataRow row in dataTable.Rows)
-            {
-                var values = new List<string>();
-                for (int i = 0; i < dataTable.Columns.Count; i++)
-                {
-                    var value = row[i];
-                    if (value == DBNull.Value)
-                    {
-                        values.Add(string.Empty);
-                    }
-                    else
-                    {
-                        var strValue = value.ToString();
-                        if (strValue != null)
+                        // 自动缩放Y轴（分位数）
+                        var allY = sparam.Magnitudes.Values.SelectMany(arr => arr)
+                            .Where(y => !double.IsNaN(y) && !double.IsInfinity(y) && Math.Abs(y) < 200)
+                            .OrderBy(y => y).ToArray();
+                        double minY, maxY;
+                        if (allY.Length > 10)
                         {
-                            values.Add(strValue);
+                            minY = Percentile(allY, 0.1);
+                            maxY = Percentile(allY, 99.9);
+                        }
+                        else if (allY.Length > 0)
+                        {
+                            minY = allY.Min();
+                            maxY = allY.Max();
                         }
                         else
                         {
-                            values.Add(string.Empty);
+                            minY = -60;
+                            maxY = 0;
                         }
+                        double padding = (maxY - minY) * 0.05;
+                        PlotView.Plot.Axes.SetLimitsY(minY - padding, maxY + padding, PlotView.Plot.Axes.Left);
+                        // 设置X轴范围
+                        double minX = sparam.Frequencies.Min();
+                        double maxX = sparam.Frequencies.Max();
+                        double xPadding = (maxX - minX) * 0.02;
+                        PlotView.Plot.Axes.SetLimitsX(minX - xPadding, maxX + xPadding, PlotView.Plot.Axes.Bottom);
+                        PlotView.Refresh();
+                        return;
                     }
-                }
-                processedLines.Add(string.Join(",", values));
+                    catch (Exception ex)
+                    {
+                        AppendDebugInfo($"S参数文件解析失败: {ex.Message}");
+                        return;
+                    }
+                default:
+                    AppendDebugInfo($"不支持的文件类型: {fileExtension}");
+                    return;
             }
 
-            // 直接处理数据
-            ProcessDataLines(processedLines, Path.GetFileName(filePath));
+            if (processedLines.Count > 0)
+            {
+                FileUtils.ProcessDataLines(
+                    processedLines, 
+                    Path.GetFileName(filePath),
+                    AppendDebugInfo,
+                    AddCurveToPlot,
+                    UpdateAxisLabels
+                );
+            }
         }
 
-        private void ProcessDataFile(string filePath)
+        private void UpdateAxisLabels(string xLabel, string yLabel)
         {
-            AppendDebugInfo($"开始处理数据文件: {filePath}");
-            var lines = File.ReadAllLines(filePath);
-            ProcessDataLines(lines.ToList(), Path.GetFileName(filePath));
-        }
-
-        private void ProcessDataLines(List<string> lines, string sourceFileName)
-        {
-            if (lines.Count == 0)
-            {
-                AppendDebugInfo("没有数据需要处理");
-                return;
-            }
-
-            var delimiter = ","; // 使用逗号作为标准分隔符，因为数据已经被预处理为标准格式
-            var (firstDataIndex, lastDataIndex) = FindDataRange(lines.ToArray());
-
-            if (firstDataIndex >= lastDataIndex)
-            {
-                AppendDebugInfo($"未找到有效数据");
-                return;
-            }
-
-            var data = new List<double[]>();
-            string[]? headers = null;
-
-            // 检查第一行是否为表头
-            if (firstDataIndex > 0)
-            {
-                string[] potentialHeader = lines[firstDataIndex - 1].Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-                if (potentialHeader.All(p => !double.TryParse(p, out _)))
-                {
-                    headers = potentialHeader;
-                    if (headers.Length >= 2)
-                    {
-                        if (XAxisLabelTextBox.Text == "X" && !string.IsNullOrEmpty(headers[0])) 
-                            XAxisLabelTextBox.Text = headers[0];
-                        if (YAxisLabelTextBox.Text == "Y" && !string.IsNullOrEmpty(headers[1])) 
-                            YAxisLabelTextBox.Text = headers[1];
-                    }
-                }
-            }
-
-            // 处理有效数据范围
-            for (int i = firstDataIndex; i <= lastDataIndex; i++)
-            {
-                string[] parts = lines[i].Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 1) continue;
-                var row = new double[parts.Length];
-                bool valid = true;
-                for (int j = 0; j < parts.Length; j++)
-                {
-                    if (!double.TryParse(parts[j], out row[j]))
-                    {
-                        valid = false;
-                        break;
-                    }
-                }
-                if (valid)
-                    data.Add(row);
-            }
-
-            if (data.Count == 0) return;
-
-            int colCount = data[0].Length;
-            int rowCount = data.Count;
-
-            // 单列数据处理
-            if (colCount == 1)
-            {
-                double[] ys = new double[rowCount];
-                for (int row = 0; row < rowCount; row++)
-                    ys[row] = data[row][0];
-                double[] xs = Enumerable.Range(0, rowCount).Select(i => (double)i).ToArray();
-                AppendDebugInfo($"检测到单列数据，使用索引作为X轴，数量={rowCount}");
-                var label = headers != null && headers.Length > 0 && !string.IsNullOrEmpty(headers[0]) ? headers[0] : "Y";
-                AddCurveToPlot(label, xs, ys, sourceFileName, true);
-                return;
-            }
-
-            // 检查是否所有列都是数值
-            bool allColumnsAreNumeric = true;
-            for (int col = 0; col < colCount; col++)
-            {
-                bool columnIsNumeric = true;
-                for (int row = 0; row < rowCount; row++)
-                {
-                    if (!double.TryParse(data[row][col].ToString(), out _))
-                    {
-                        columnIsNumeric = false;
-                        break;
-                    }
-                }
-                if (!columnIsNumeric)
-                {
-                    allColumnsAreNumeric = false;
-                    break;
-                }
-            }
-
-            // 如果所有列都是数值，使用第一列作为X轴
-            if (allColumnsAreNumeric)
-            {
-                // 提取X值（第一列）
-                double[] xs = new double[rowCount];
-                for (int row = 0; row < rowCount; row++)
-                {
-                    xs[row] = data[row][0];
-                }
-                AppendDebugInfo($"X轴范围: {xs[0]} 到 {xs[xs.Length-1]}");
-
-                // 处理Y值（其他列）
-                bool shouldLimitVisibility = colCount > 6;
-            for (int col = 1; col < colCount; col++)
-            {
-                    double[] ys = new double[rowCount];
-                    for (int row = 0; row < rowCount; row++)
-                    {
-                        ys[row] = data[row][col];
-                    }
-                    string label = headers != null && headers.Length > col ? headers[col] : $"列{col+1}";
-                    AddCurveToPlot(label, xs, ys, sourceFileName, !shouldLimitVisibility || col == 1);
-                }
-            }
-            else
-            {
-                // 如果有非数值列，将所有列都作为Y值，使用索引作为X轴
-                AppendDebugInfo("检测到非数值列，所有列将作为Y值，使用索引作为X轴");
-                double[] xs = Enumerable.Range(0, rowCount).Select(i => (double)i).ToArray();
-                
-                for (int col = 0; col < colCount; col++)
-            {
-                    double[] ys = new double[rowCount];
-                    bool columnIsValid = true;
-                    
-                    for (int row = 0; row < rowCount; row++)
-                    {
-                        if (!double.TryParse(data[row][col].ToString(), out ys[row]))
-                        {
-                            columnIsValid = false;
-                            break;
-                        }
-                    }
-                    
-                    if (columnIsValid)
-                    {
-                        string label = headers != null && headers.Length > col ? headers[col] : $"列{col+1}";
-                        AddCurveToPlot(label, xs, ys, sourceFileName, true);
-            }
-                }
-            }
-
-            PlotView.Plot.Axes.AutoScale();
-            PlotView.Refresh();
-            AppendDebugInfo("数据处理完成");
-        }
-
-        private string? DetectDelimiter(string[] lines)
-        {
-            foreach (var line in lines.Take(10))
-            {
-                if (string.IsNullOrEmpty(line)) continue;
-                if (line.Contains('\t')) return "\t";
-                if (line.Contains(',')) return ",";
-            }
-            return null;
-        }
-
-        private (int firstDataIndex, int lastDataIndex) FindDataRange(string[] lines)
-        {
-            AppendDebugInfo($"开始检测数据范围，文件行数: {lines.Length}");
-            var delimiter = DetectDelimiter(lines);
-            
-            // 查找最后一个有效数据行
-            int lastDataIndex = -1;
-            int numColumns = 0;
-            for (int i = lines.Length - 1; i >= 0; i--)
-                {
-                if (string.IsNullOrEmpty(lines[i])) continue;
-                string[] columns = delimiter == null
-                    ? new[] { lines[i].Trim() }
-                    : lines[i].Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-                if (columns.Length < 1) continue;
-
-                if (double.TryParse(columns[0], out _))
-                {
-                    lastDataIndex = i;
-                    numColumns = columns.Length;
-                    AppendDebugInfo($"找到最后数据行，索引: {lastDataIndex}, 列数: {numColumns}");
-                    break;
-                }
-            }
-
-            if (lastDataIndex == -1)
-            {
-                AppendDebugInfo("未找到有效数据");
-                return (-1, -1);
-            }
-
-            // 查找第一个有效数据行
-            int firstDataIndex = -1;
-            for (int i = 0; i <= lastDataIndex; i++)
-                {
-                if (string.IsNullOrEmpty(lines[i])) continue;
-                string[] columns = delimiter == null
-                    ? new[] { lines[i].Trim() }
-                    : lines[i].Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-                if (columns.Length != numColumns) continue;
-
-                if (double.TryParse(columns[0], out _))
-                {
-                    firstDataIndex = i;
-                    AppendDebugInfo($"找到第一个数据行，索引: {firstDataIndex}");
-                    break;
-                }
-            }
-
-            AppendDebugInfo($"数据范围: {firstDataIndex} 到 {lastDataIndex} (共 {lastDataIndex - firstDataIndex + 1} 行)");
-            return (firstDataIndex, lastDataIndex);
+            if (XAxisLabelTextBox.Text == "X" && !string.IsNullOrEmpty(xLabel)) 
+                XAxisLabelTextBox.Text = xLabel;
+            if (YAxisLabelTextBox.Text == "Y" && !string.IsNullOrEmpty(yLabel)) 
+                YAxisLabelTextBox.Text = yLabel;
         }
 
         private void SaveImageButton_Click(object sender, RoutedEventArgs e)
@@ -564,10 +325,43 @@ namespace QuquPlot
                 DefaultExt = ".png"
             };
 
+            // 获取用户设置的分辨率
+            if (!int.TryParse(ImageWidthTextBox.Text, out int width) || width <= 0)
+            {
+                MessageBox.Show("请输入有效的宽度值（大于0的整数）", "输入错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ImageWidthTextBox.Focus();
+                return;
+            }
+
+            if (!int.TryParse(ImageHeightTextBox.Text, out int height) || height <= 0)
+            {
+                MessageBox.Show("请输入有效的高度值（大于0的整数）", "输入错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ImageHeightTextBox.Focus();
+                return;
+            }
+
+            // 临时禁用crosshair和mouseCoordLabel
+            crosshair.IsVisible = false;
+            mouseCoordLabel.IsVisible = false;
+
             if (dialog.ShowDialog() == true)
             {
-                PlotView.Plot.SavePng(dialog.FileName, 1500, 1000);
+                try
+                {
+                    
+                    PlotView.Plot.SavePng(dialog.FileName, width, height);
+                    AppendDebugInfo($"图片已保存: {dialog.FileName}, 分辨率: {width}x{height}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"保存图片时出错：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    AppendDebugInfo($"保存图片失败: {ex.Message}");
+                }
             }
+
+            // 恢复crosshair和mouseCoordLabel
+            crosshair.IsVisible = enableCrosshair;
+            mouseCoordLabel.IsVisible = true;
         }
 
         private void ZoomResetButton_Click(object sender, RoutedEventArgs e)
@@ -623,8 +417,7 @@ namespace QuquPlot
             if (PlotView?.Plot == null) return;
 
             // 更新坐标轴标签
-            PlotView.Plot.XLabel(XAxisLabelTextBox.Text);
-            PlotView.Plot.YLabel(YAxisLabelTextBox.Text);
+            PlotUtils.SetAxisLabels(PlotView.Plot, XAxisLabelTextBox.Text, YAxisLabelTextBox.Text);
             
             // 刷新显示
             PlotView.Refresh();
@@ -633,7 +426,15 @@ namespace QuquPlot
         private void ClearAllButton_Click(object sender, RoutedEventArgs e)
         {
             AppendDebugInfo("清除所有曲线");
-            PlotView.Plot.Clear();
+            
+            // 1. 先移除所有曲线，但保留 crosshair 和 mouseCoordLabel
+            // 先移除所有 Scatter（或你自定义的曲线类型）
+            var toRemove = PlotView.Plot.GetPlottables()
+                .Where(p => p != crosshair && p != mouseCoordLabel)
+                .ToList();
+            foreach (var p in toRemove)
+                PlotView.Plot.Remove(p);
+            
             _curveMap.Clear();
             _curveInfos.Clear();
             // 不再调用UpdateOtherCurves
@@ -688,7 +489,6 @@ namespace QuquPlot
 
         private void CurveInfo_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            AppendDebugInfo($"[事件] CurveInfo_PropertyChanged: {e.PropertyName}");
             if (sender is not CurveInfo curveInfo || e.PropertyName == null)
                 return;
 
@@ -722,11 +522,7 @@ namespace QuquPlot
                     break;
                 case nameof(CurveInfo.Opacity):
                 case nameof(CurveInfo.PlotColor):
-                            scatter.Color = new ScottPlot.Color(
-                        curveInfo.PlotColor.R / 255.0f,
-                        curveInfo.PlotColor.G / 255.0f,
-                        curveInfo.PlotColor.B / 255.0f,
-                        (float)curveInfo.Opacity);
+                    scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
                     AppendDebugInfo($"更新颜色: R={curveInfo.PlotColor.R}, G={curveInfo.PlotColor.G}, B={curveInfo.PlotColor.B}, 透明度={curveInfo.Opacity}");
                     break;
                 case nameof(CurveInfo.OperationType):
@@ -744,6 +540,14 @@ namespace QuquPlot
                     break;
                 case nameof(CurveInfo.Ys):
                     AppendDebugInfo($"更新Ys: {curveInfo.Name}");
+                    RedrawCurve(curveInfo);
+                    break;
+                case nameof(CurveInfo.XMagnitude):
+                    AppendDebugInfo($"更新X缩放: {curveInfo.XMagnitude}");
+                    RedrawCurve(curveInfo);
+                    break;
+                case nameof(CurveInfo.ReverseX):
+                    AppendDebugInfo($"反转X顺序: {curveInfo.ReverseX}");
                     RedrawCurve(curveInfo);
                     break;
             }
@@ -796,7 +600,7 @@ namespace QuquPlot
         {
             // 填充颜色块
             ColorGrid.Children.Clear();
-            foreach (var colorHex in _colorPalette)
+            foreach (var colorHex in ColorUtils.ColorPalette)
             {
                 var brushConverter = new BrushConverter();
                 var brush = brushConverter.ConvertFrom(colorHex);
@@ -806,8 +610,8 @@ namespace QuquPlot
                     {
                         Background = backgroundBrush,
                         Tag = colorHex,
-                        Width = COLOR_BLOCK_SIZE,
-                        Height = COLOR_BLOCK_SIZE,
+                        Width = ColorUtils.ColorBlockSize,
+                        Height = ColorUtils.ColorBlockSize,
                         Padding = new Thickness(0),
                         Margin = new Thickness(1),
                         BorderThickness = new Thickness(0),
@@ -822,7 +626,16 @@ namespace QuquPlot
             // 记录当前DataContext，便于OnColorSelect使用
             ColorGrid.DataContext = border.DataContext;
             ColorPickerPopup.IsOpen = true;
-            e.Handled = true;
+            // 注册全局鼠标事件，点击外部时关闭Popup
+            Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(this, OnMouseDownOutsideColorPicker);
+            Mouse.Capture(ColorPickerPopup.Child, CaptureMode.SubTree);
+        }
+
+        private void OnMouseDownOutsideColorPicker(object sender, MouseButtonEventArgs e)
+        {
+            ColorPickerPopup.IsOpen = false;
+            Mouse.RemovePreviewMouseDownOutsideCapturedElementHandler(this, OnMouseDownOutsideColorPicker);
+            Mouse.Capture(null);
         }
 
         // 色板点击，更新曲线颜色
@@ -835,26 +648,24 @@ namespace QuquPlot
                     var colorObj = System.Windows.Media.ColorConverter.ConvertFromString(hex);
                     if (colorObj is System.Windows.Media.Color color)
                     {
-                info.PlotColor = color;
+                        info.PlotColor = color;
                         // 确保UI更新颜色方块
                         info.OnPropertyChanged(nameof(info.Brush));
-                // 更新对应曲线颜色
-                int idx = _curveInfos.IndexOf(info);
+                        // 更新对应曲线颜色
+                        int idx = _curveInfos.IndexOf(info);
                         if (idx >= 0 && idx < _curveMap.Count)
-                {
+                        {
                             if (_curveMap.Values.ElementAt(idx).Plot is ScottPlot.Plottables.Scatter scatter)
-                    {
-                        scatter.Color = new ScottPlot.Color(
-                            color.R / 255.0f,
-                            color.G / 255.0f,
-                            color.B / 255.0f,
-                            (float)info.Opacity
-                        );
-                        PlotView.Refresh();
+                            {
+                                scatter.Color = ColorUtils.ToScottPlotColor(color, info.Opacity);
+                                PlotView.Refresh();
+                            }
+                        }
+                        ColorPickerPopup.IsOpen = false;
+                        // 注销全局鼠标事件
+                        Mouse.RemovePreviewMouseDownOutsideCapturedElementHandler(this, OnMouseDownOutsideColorPicker);
+                        Mouse.Capture(null);
                     }
-                }
-                ColorPickerPopup.IsOpen = false;
-            }
                     else
                     {
                         AppendDebugInfo($"颜色转换失败: 无法将 {hex} 转换为颜色");
@@ -875,43 +686,27 @@ namespace QuquPlot
 
         private ScottPlot.Plottables.Scatter DrawCurve(CurveInfo curveInfo)
         {
-            AppendDebugInfo($"绘制曲线: {curveInfo.Name}");
-            var scatter = PlotView.Plot.Add.Scatter(
-                curveInfo.Xs,
-                curveInfo.Ys,
-                color: new ScottPlot.Color(
-                    curveInfo.PlotColor.R / 255.0f,
-                    curveInfo.PlotColor.G / 255.0f,
-                    curveInfo.PlotColor.B / 255.0f,
-                    (float)curveInfo.Opacity));
-
-            scatter.LegendText = curveInfo.Name;
-            scatter.LineWidth = (float)curveInfo.Width;
-            scatter.LinePattern = curveInfo.GetLinePattern();
-            scatter.IsVisible = curveInfo.Visible;
-            scatter.MarkerSize = (float)curveInfo.MarkerSize;
-
-            _curveMap[curveInfo.HashId] = (curveInfo, scatter);
-            AppendDebugInfo($"曲线属性: 线宽={curveInfo.Width}, 线型={curveInfo.LineStyle}, 可见性={curveInfo.Visible}, 标记大小={curveInfo.MarkerSize}");
+            var scatter = PlotUtils.DrawCurve(PlotView.Plot, curveInfo, AppendDebugInfo);
+            _curveMap[curveInfo.HashId] = (curveInfo, scatter); // 维护映射
             return scatter;
         }
 
         private void RedrawCurve(CurveInfo curveInfo)
         {
-            AppendDebugInfo($"重绘曲线: {curveInfo.Name}");
+            // 先移除旧的
             if (_curveMap.TryGetValue(curveInfo.HashId, out var curveData))
             {
                 PlotView.Plot.Remove(curveData.Plot);
             }
-            DrawCurve(curveInfo);
+            var scatter = DrawCurve(curveInfo);
             PlotView.Plot.Axes.AutoScale();
+            PlotView.Plot.MoveToTop(crosshair);
             PlotView.Refresh();
             AppendDebugInfo("重绘完成");
         }
 
         private void RedrawAllCurves()
         {
-            AppendDebugInfo("开始重绘所有曲线");
             PlotView.Plot.Clear();
             _curveMap.Clear();
             foreach (var curveInfo in _curveInfos)
@@ -919,70 +714,30 @@ namespace QuquPlot
                 DrawCurve(curveInfo);
             }
             PlotView.Plot.Axes.AutoScale();
+            PlotView.Plot.MoveToTop(crosshair);
             PlotView.Refresh();
             AppendDebugInfo("重绘完成");
         }
 
         private void ClearDebugButton_Click(object sender, RoutedEventArgs e)
         {
-            DebugTextBox.Clear();
+            DebugUtils.ClearDebug(DebugTextBox);
         }
 
         private void CopyDebugButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(DebugTextBox.Text))
-            {
-                System.Windows.Clipboard.SetText(DebugTextBox.Text);
-            }
+            DebugUtils.CopyDebug(DebugTextBox);
         }
 
         private void AppendDebugInfo(string message)
         {
-            DebugTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
-            DebugTextBox.ScrollToEnd();
+            DebugUtils.AppendDebugInfo(DebugTextBox, message);
         }
 
-        private int _colorIndex = 0;
         private ScottPlot.Color GetNextColor()
         {
-            // 获取当前已使用的颜色
             var usedColors = _curveInfos.Select(c => c.PlotColor).ToList();
-            // 先尝试找未用过的色盘颜色
-            foreach (var hex in _colorPalette)
-            {
-                var color = ColorFromHex(hex);
-                if (!usedColors.Any(uc => uc.R == color.R && uc.G == color.G && uc.B == color.B))
-                    return color;
-            }
-            // 如果都用过了，循环使用色盘
-            var hex2 = _colorPalette[_colorIndex % _colorPalette.Length];
-            _colorIndex++;
-            return ColorFromHex(hex2);
-        }
-
-        private string GetSmartSuffix(string? newFileName, List<string> existingFiles)
-        {
-            if (string.IsNullOrEmpty(newFileName) || existingFiles == null || existingFiles.Count == 0)
-                return string.Empty;
-
-            string[] newParts = Path.GetFileNameWithoutExtension(newFileName).Split('_');
-            var existingPartsList = existingFiles
-                .Select(f => Path.GetFileNameWithoutExtension(f).Split('_'))
-                .ToList();
-
-            // 从后往前找最后一个不同的片段
-            for (int i = newParts.Length - 1; i >= 0; i--)
-            {
-                string part = newParts[i];
-                bool isUnique = existingPartsList.All(parts =>
-                    i >= parts.Length || parts[i] != part);
-                if (isUnique && !string.IsNullOrWhiteSpace(part))
-                {
-                    return part;
-                }
-            }
-            // 如果都相同，返回整个文件名
-            return Path.GetFileNameWithoutExtension(newFileName);
+            return PlotUtils.GetNextColor(usedColors);
         }
 
         private ScottPlot.IPlottable? AddCurveToPlot(string label, double[] xs, double[] ys, string sourceFileName, bool isFirstCurveInFile)
@@ -993,17 +748,16 @@ namespace QuquPlot
                 return null;
             }
 
-            AppendDebugInfo($"数据点数量: X={xs.Length}, Y={ys.Length}");
+            AppendDebugInfo($"AddCurveToPlot: {label}, 数据点: {xs.Length}");
 
-            AppendDebugInfo($"AddCurveToPlot: label={label}, xs前5项={string.Join(", ", xs.Take(5))}, ys前5项={string.Join(", ", ys.Take(5))}");
-
-            AppendDebugInfo($"创建 CurveInfo 并传递日志委托: label={label}");
-            var curveInfo = new CurveInfo(AppendDebugInfo);
+            var lengthLabel = TryFindResource("LengthLabel") as string ?? "长度：";
+            var curveInfo = new CurveInfo(AppendDebugInfo, null, lengthLabel);
             curveInfo.Name = label ?? "未命名曲线";
             curveInfo.Xs = xs;
             curveInfo.Ys = ys;
             curveInfo.Visible = isFirstCurveInFile;
-            curveInfo.SourceFileName = sourceFileName ?? "未知文件";
+            curveInfo.SourceFileName = sourceFileName;
+            curveInfo.SourceFileFullPath = Path.GetFullPath(sourceFileName);
             curveInfo.GenerateHashId();
 
             // 检查是否已存在相同名称的曲线
@@ -1014,21 +768,18 @@ namespace QuquPlot
                 return null;
             }
 
-            AppendDebugInfo($"创建曲线信息: {label ?? "未命名曲线"}, HashId={curveInfo.HashId}");
-
             // 设置曲线颜色
             var nextColor = GetNextColor();
             curveInfo.PlotColor = System.Windows.Media.Color.FromRgb(nextColor.R, nextColor.G, nextColor.B);
             // 确保UI更新颜色方块
             curveInfo.OnPropertyChanged(nameof(curveInfo.Brush));
-            AppendDebugInfo($"设置曲线颜色: R={curveInfo.PlotColor.R}, G={curveInfo.PlotColor.G}, B={curveInfo.PlotColor.B}");
 
             // 检查名字冲突，自动加智能后缀
             string uniqueLabel = curveInfo.Name;
             int suffixIndex = 1;
             var existingNames = _curveInfos.Select(ci => ci.Name).ToHashSet();
             var existingFiles = _curveInfos.Select(ci => ci.SourceFileName).ToList();
-            string smartSuffix = GetSmartSuffix(sourceFileName, existingFiles);
+            string smartSuffix = FileUtils.GetSmartSuffix(sourceFileName, existingFiles);
             
             while (existingNames.Contains(uniqueLabel))
             {
@@ -1047,16 +798,11 @@ namespace QuquPlot
             }
 
             curveInfo.Name = uniqueLabel;
-            AppendDebugInfo($"更新曲线名称: {curveInfo.Name}");
 
             var scatter = PlotView.Plot.Add.Scatter(xs, ys);
             if (scatter != null)
             {
-                scatter.Color = new ScottPlot.Color(
-                    curveInfo.PlotColor.R / 255.0f,
-                    curveInfo.PlotColor.G / 255.0f,
-                    curveInfo.PlotColor.B / 255.0f,
-                    (float)curveInfo.Opacity);
+                scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
                 scatter.LineWidth = (float)curveInfo.Width;
                 scatter.MarkerSize = (float)curveInfo.MarkerSize;
                 scatter.LegendText = curveInfo.Name;
@@ -1072,19 +818,16 @@ namespace QuquPlot
                     AppendDebugInfo("警告：曲线HashId为空，无法添加到映射中");
                 }
 
-                // 增量更新OtherCurves
-                foreach (var ci in _curveInfos)
-                {
-                    if (ci != curveInfo && !ci.OtherCurves.Contains(curveInfo))
-                        ci.OtherCurves.Add(curveInfo);
-                }
-                curveInfo.OtherCurves.Clear();
-                foreach (var ci in _curveInfos)
-                {
-                    if (ci != curveInfo)
-                        curveInfo.OtherCurves.Add(ci);
-                }
+                // 确保所有曲线的OtherCurves都正确更新
+                UpdateOtherCurvesIncremental(curveInfo);
+                
                 AppendDebugInfo($"当前曲线数量: {_curveInfos.Count}, 映射数量: {_curveMap.Count}");
+                
+                // 刷新显示
+                PlotView.Plot.MoveToTop(crosshair);
+                PlotView.Plot.Axes.AutoScale();
+                PlotView.Refresh();
+                
                 return scatter;
             }
             return null;
@@ -1158,39 +901,39 @@ namespace QuquPlot
                 .ToHashSet();
             
             AppendDebugInfo($"找到 {selectedTargets.Count} 个被选中的目标曲线");
-            foreach (var target in selectedTargets)
-            {
-                AppendDebugInfo($"目标曲线: {target?.Name}");
-            }
 
             foreach (var ci in _curveInfos)
             {
-                AppendDebugInfo($"处理曲线: {ci.Name}");
-                AppendDebugInfo($"当前操作类型: {ci.OperationType}");
-                AppendDebugInfo($"当前目标曲线: {ci.TargetCurve?.Name ?? "无"}");
+                // 检查当前选择的目标曲线是否数据点数量匹配
+                if (ci.TargetCurve != null && ci.Xs.Length != ci.TargetCurve.Xs.Length)
+                {
+                    AppendDebugInfo($"目标曲线数据点数量不匹配，清除选择: {ci.TargetCurve.Name} ({ci.TargetCurve.Xs.Length} vs {ci.Xs.Length})");
+                    ci.TargetCurve = null;
+                    if (ci.OperationType != "无")
+                    {
+                        ci.OperationType = "无";
+                        ci.UpdateCurveData();
+                    }
+                }
                 
                 if (selectedTargets.Contains(ci))
                 {
-                    AppendDebugInfo($"曲线 {ci.Name} 是被选中的目标，需要禁用操作");
                     if (ci.OperationType != "无")
                     {
-                        AppendDebugInfo($"重置曲线 {ci.Name} 的操作类型为'无'");
                         ci.OperationType = "无";
                         ci.UpdateCurveData();
                     }
                     ci.IsOperationEnabled = false;
                     if (ci.TargetCurve != null)
                     {
-                        AppendDebugInfo($"清除曲线 {ci.Name} 的目标曲线");
                         ci.TargetCurve = null;
                     }
                     ci.IsTargetCurveEnabled = false;
                 }
                 else
                 {
-                    AppendDebugInfo($"曲线 {ci.Name} 不是被选中的目标，启用操作");
                     ci.IsOperationEnabled = true;
-                    // ci.IsTargetCurveEnabled = true;
+                    ci.IsTargetCurveEnabled = true;
                 }
             }
             
@@ -1199,29 +942,56 @@ namespace QuquPlot
 
         private void UpdateOtherCurves()
         {
-            AppendDebugInfo("开始更新其他曲线列表");
-            AppendDebugInfo($"当前曲线总数: {_curveInfos.Count}");
+            // 减少debug输出，只在关键节点输出
+            AppendDebugInfo($"开始更新其他曲线列表，曲线总数: {_curveInfos.Count}");
+            
+            // 按数据点数量分组，避免重复计算
+            var curvesByDataPointCount = _curveInfos.GroupBy(ci => ci.Xs.Length).ToDictionary(g => g.Key, g => g.ToList());
             
             foreach (var ci in _curveInfos)
             {
-                AppendDebugInfo($"处理曲线: {ci.Name}");
-                AppendDebugInfo($"当前其他曲线数量: {ci.OtherCurves.Count}");
-                
                 ci.OtherCurves.Clear();
-                foreach (var other in _curveInfos)
+                
+                // 只查找具有相同数据点数量的曲线
+                if (curvesByDataPointCount.TryGetValue(ci.Xs.Length, out var compatibleCurves))
                 {
-                    // 确保不添加自身到OtherCurves列表中
-                    if (other.HashId != ci.HashId)
+                    foreach (var other in compatibleCurves)
                     {
-                        AppendDebugInfo($"添加其他曲线: {other.Name} 到 {ci.Name} 的列表中");
-                        ci.OtherCurves.Add(other);
+                        if (other.HashId != ci.HashId)
+                        {
+                            ci.OtherCurves.Add(other);
+                        }
                     }
                 }
-                
-                AppendDebugInfo($"更新后其他曲线数量: {ci.OtherCurves.Count}");
             }
             
             AppendDebugInfo("其他曲线列表更新完成");
+        }
+
+        /// <summary>
+        /// 增量更新其他曲线列表，只处理新添加的曲线
+        /// </summary>
+        /// <param name="newCurve">新添加的曲线</param>
+        private void UpdateOtherCurvesIncremental(CurveInfo newCurve)
+        {
+            // 为新曲线添加其他曲线
+            newCurve.OtherCurves.Clear();
+            foreach (var existing in _curveInfos)
+            {
+                if (existing.HashId != newCurve.HashId && existing.Xs.Length == newCurve.Xs.Length)
+                {
+                    newCurve.OtherCurves.Add(existing);
+                }
+            }
+            
+            // 为现有曲线添加新曲线
+            foreach (var existing in _curveInfos)
+            {
+                if (existing.HashId != newCurve.HashId && existing.Xs.Length == newCurve.Xs.Length)
+                {
+                    existing.OtherCurves.Add(newCurve);
+                }
+            }
         }
 
         private void CurveListView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1231,6 +1001,15 @@ namespace QuquPlot
 
         private void CurveListView_MouseMove(object sender, MouseEventArgs e)
         {
+            // 如果拖动的是Slider，不处理
+            DependencyObject? original = e.OriginalSource as DependencyObject;
+            while (original != null)
+            {
+                if (original is Slider)
+                    return;
+                original = VisualTreeHelper.GetParent(original);
+            }
+
             if (e.LeftButton == MouseButtonState.Pressed)
             {
                 Point mousePos = e.GetPosition(null);
@@ -1417,19 +1196,7 @@ namespace QuquPlot
                 {
                     try
                     {
-                        string fileExtension = System.IO.Path.GetExtension(filePath).ToLower();
-                        if (fileExtension == ".csv")
-                        {
-                            ProcessDataFile(filePath);
-                        }
-                        else if (fileExtension == ".xls" || fileExtension == ".xlsx")
-                        {
-                            LoadExcelFile(filePath);
-                        }
-                        else if (fileExtension == ".txt")
-                        {
-                            LoadTxtFile(filePath);
-                        }
+                        ProcessFile(filePath);
                     }
                     catch (Exception ex)
                     {
@@ -1438,6 +1205,108 @@ namespace QuquPlot
                 }
             }
             e.Handled = true;
+        }
+
+        private void PlotView_MouseMove_ScottPlot(object sender, MouseEventArgs e)
+        {
+
+            // 获取鼠标在图表坐标系中的位置  
+            Point p = e.GetPosition(PlotView);
+            ScottPlot.Pixel mousePixel = new(p.X * PlotView.DisplayScale, p.Y * PlotView.DisplayScale);
+            ScottPlot.Coordinates mouseCoordinates = PlotView.Plot.GetCoordinates(mousePixel);
+            crosshair.Position = mouseCoordinates;
+
+
+            mouseCoordLabel.Text = $"({FormatNumber(mouseCoordinates.X)}, {FormatNumber(mouseCoordinates.Y)})";
+            PlotView.Refresh();
+        }
+
+        private string FormatNumber(double value)
+        {
+            if (Math.Abs(value) < 0.01 || Math.Abs(value) > 100)
+                return value.ToString("0.00E+0"); // 科学计数法，两位小数
+            else
+                return value.ToString("0.00");    // 普通，两位小数（去掉多余的0）
+        }
+
+        private void OnXMagnitudePreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            // 允许负号和数字
+            string text = e.Text;
+            if (text == "-")
+            {
+                // 只允许第一个字符为负号
+                if (sender is TextBox tb && tb.SelectionStart == 0 && !tb.Text.Contains("-"))
+                {
+                    e.Handled = false;
+                    return;
+                }
+                else
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+            // 只允许数字
+            foreach (char c in text)
+            {
+                if (!char.IsDigit(c))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+            e.Handled = false;
+        }
+
+        private void OnImageResolutionPreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            // 只允许数字
+            foreach (char c in e.Text)
+            {
+                if (!char.IsDigit(c))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+            e.Handled = false;
+        }
+
+        private void LegendPositionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded) return;
+            if (PlotView?.Plot == null || LegendPositionComboBox.SelectedItem == null) return;
+
+            var selectedItem = LegendPositionComboBox.SelectedItem as ComboBoxItem;
+            if (selectedItem?.Content == null) return;
+
+            ScottPlot.Alignment alignment = selectedItem.Content.ToString() switch
+            {
+                "左下" or "Lower Left" => ScottPlot.Alignment.LowerLeft,
+                "左上" or "Upper Left" => ScottPlot.Alignment.UpperLeft,
+                "右下" or "Lower Right" => ScottPlot.Alignment.LowerRight,
+                "右上" or "Upper Right" => ScottPlot.Alignment.UpperRight,
+                _ => ScottPlot.Alignment.LowerLeft
+            };
+
+            PlotView.Plot.Legend.Alignment = alignment;
+            PlotView.Refresh();
+            AppendDebugInfo($"图例位置已更改为: {selectedItem.Content}");
+        }
+
+        private static double Percentile(double[] sortedData, double percentile)
+        {
+            if (sortedData == null || sortedData.Length == 0) return 0;
+            if (percentile <= 0) return sortedData.First();
+            if (percentile >= 100) return sortedData.Last();
+            double position = (sortedData.Length - 1) * percentile / 100.0;
+            int left = (int)Math.Floor(position);
+            int right = (int)Math.Ceiling(position);
+            if (left == right) return sortedData[left];
+            double leftValue = sortedData[left];
+            double rightValue = sortedData[right];
+            return leftValue + (rightValue - leftValue) * (position - left);
         }
     }
 } 

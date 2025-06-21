@@ -90,6 +90,10 @@ namespace QuquPlot.Models
                 {
                     ParseCSVFile(lines, result);
                 }
+                else if (filePath.EndsWith(".s3p", StringComparison.OrdinalIgnoreCase))
+                {
+                    ParseS3pFile(lines, result);
+                }
                 else
                 {
                     ParseSParameterFile(lines, result);
@@ -142,7 +146,6 @@ namespace QuquPlot.Models
                     result.Magnitudes["S22"].Add(double.Parse(values[1]));
                     result.Magnitudes["S11"].Add(double.Parse(values[2]));
                     result.Magnitudes["Ssd21"].Add(double.Parse(values[3]));
-                    DebugHelper.WriteLine($"CSV SSD21: {values[3]} dB");
                 }
             }
         }
@@ -264,26 +267,22 @@ namespace QuquPlot.Models
 
             if (magnitudes["Ssd21"].Count < 10)
             {
-                DebugHelper.WriteLine($"S42: {s42_db} dB, {s42_ang} deg");
-                DebugHelper.WriteLine($"S43: {s43_db} dB, {s43_ang} deg");
+
 
                 // Convert to complex numbers
                 var s42 = Complex.FromDBAndAngle(s42_db, s42_ang);
                 var s43 = Complex.FromDBAndAngle(s43_db, s43_ang);
 
-                DebugHelper.WriteLine($"S42 complex: {s42.Real} + j{s42.Imag}");
-                DebugHelper.WriteLine($"S43 complex: {s43.Real} + j{s43.Imag}");
+
 
                 // Calculate SSD21 = 0.5 * (S42 - S43)
                 var ssd21 = 0.5 * (s42 - s43);
-                DebugHelper.WriteLine($"SSD21 complex: {ssd21.Real} + j{ssd21.Imag}");
-                DebugHelper.WriteLine($"SSD21 magnitude: {ssd21.MagnitudeDB()} dB");
-                DebugHelper.WriteLine($"SSD21 magnitude (raw): {ssd21.Magnitude()}");
+
 
                 // Store the value
                 double ssd21_db = ssd21.MagnitudeDB();
                 magnitudes["Ssd21"].Add(ssd21_db);
-                DebugHelper.WriteLine($"Stored SSD21 value: {ssd21_db} dB");
+
             }
             else
             {
@@ -315,6 +314,59 @@ namespace QuquPlot.Models
             // Calculate SDD11 = 0.5 * (S22 - S23 - S32 + S33)
             var sdd11 = 0.5 * (s22 - s23 - s32 + s33);
             magnitudes["Sdd11"].Add(sdd11.MagnitudeDB());
+        }
+
+        // s3p专用解析
+        private static void ParseS3pFile(string[] lines, SParameterData result)
+        {
+            var dataLines = new List<string>();
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedLine))
+                    continue;
+                if (!trimmedLine.StartsWith("!") && !trimmedLine.StartsWith("#"))
+                    dataLines.Add(trimmedLine);
+            }
+            result.Magnitudes["Ssd21"] = new List<double>();
+            result.Magnitudes["Sdd11"] = new List<double>();
+            result.Magnitudes["Sss22"] = new List<double>();
+
+            for (int i = 0; i + 2 < dataLines.Count; i += 3)
+            {
+                var row1 = dataLines[i].Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                var row2 = dataLines[i + 1].Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                var row3 = dataLines[i + 2].Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (row1.Length >= 1 && row2.Length >= 6 && row3.Length >= 6)
+                {
+                    double freqGHz = double.Parse(row1[0]) / 1e9;
+                    result.Frequencies.Add(freqGHz);
+
+
+                    // Sdd11 
+                    double mag_s11 = double.Parse(row1[1]);
+                    double ang_s11 = double.Parse(row1[2]);
+                    var sdd11 = new Complex(mag_s11 * Math.Cos(ang_s11 * Math.PI / 180), mag_s11 * Math.Sin(ang_s11 * Math.PI / 180));
+                    double sdd11dB = 20 * Math.Log10(sdd11.Magnitude());
+                    result.Magnitudes["Sdd11"].Add(sdd11dB);
+
+
+                    // Ssd21
+                    double mag_s21 = double.Parse(row3[0]);
+                    double ang_s21 = double.Parse(row3[1]);
+                    var ssd21 = new Complex(mag_s21 * Math.Cos(ang_s21 * Math.PI / 180), mag_s21 * Math.Sin(ang_s21 * Math.PI / 180));
+                    double ssd21dB = 20 * Math.Log10(ssd21.Magnitude());
+                    result.Magnitudes["Ssd21"].Add(ssd21dB);
+
+                    // Sss22
+                    double mag_s22 = double.Parse(row3[4]);
+                    double ang_s22 = double.Parse(row3[5]);
+                    var sss22 = new Complex(mag_s22 * Math.Cos(ang_s22 * Math.PI / 180), mag_s22 * Math.Sin(ang_s22 * Math.PI / 180));
+                    double sss22dB = 20 * Math.Log10(sss22.Magnitude());
+                    result.Magnitudes["Sss22"].Add(sss22dB);
+                }
+            }
         }
     }
 } 

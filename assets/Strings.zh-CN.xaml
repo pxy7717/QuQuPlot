@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="WindowTitle">曲线绘图</sys:String>
+    <sys:String x:Key="OpenFile">打开文件</sys:String>
+    <sys:String x:Key="SaveImage">保存图片</sys:String>
+    <sys:String x:Key="ZoomReset">重置缩放</sys:String>
+    <sys:String x:Key="About">关于</sys:String>
+    <sys:String x:Key="ClearAll">清除所有</sys:String>
+    <sys:String x:Key="DeleteCurve">删除曲线</sys:String>
+    <sys:String x:Key="ShowTable">显示数据表格</sys:String>
+    <sys:String x:Key="HideTable">隐藏数据表格</sys:String>
+    <sys:String x:Key="DuplicateCurveToast">未导入重复数据</sys:String>
+    <sys:String x:Key="Name">名称</sys:String>
+    <sys:String x:Key="Width">线宽</sys:String>
+    <sys:String x:Key="Opacity">透明</sys:String>
+    <sys:String x:Key="LineStyle">线型</sys:String>
+    <sys:String x:Key="SourceFile">源文件</sys:String>
+    <sys:String x:Key="LengthLabel">长度：</sys:String>
+    <sys:String x:Key="Operation">计算</sys:String>
+    <sys:String x:Key="OperationNone">无</sys:String>
+    <sys:String x:Key="OtherCurve">目标</sys:String>
+    <sys:String x:Key="XMagnitudeTip">对X值进行10的n次方缩放</sys:String>
+    <sys:String x:Key="Reverse">反转</sys:String>
+    <sys:String x:Key="ReverseTip">反转X</sys:String>
+    <sys:String x:Key="XAxisLabel">X轴标签：</sys:String>
+    <sys:String x:Key="YAxisLabel">Y轴标签：</sys:String>
+    <sys:String x:Key="LegendPosition">图例</sys:String>
+    <sys:String x:Key="LegendLowerLeft">左下</sys:String>
+    <sys:String x:Key="LegendUpperLeft">左上</sys:String>
+    <sys:String x:Key="LegendLowerRight">右下</sys:String>
+    <sys:String x:Key="LegendUpperRight">右上</sys:String>
+    <sys:String x:Key="DebugInfo">调试信息</sys:String>
+    <sys:String x:Key="Clear">清除</sys:String>
+    <sys:String x:Key="Copy">复制</sys:String>
+    <sys:String x:Key="Version">Version：0.6.1</sys:String>
+    <sys:String x:Key="Author">Author：ypcypc</sys:String>
+    <sys:String x:Key="Email">Email: pxy7717@hotmail.com</sys:String>
+    <sys:String x:Key="Date">2025-06</sys:String>
+    <!-- 可继续添加其他界面文本 -->
+</ResourceDictionary> 

@@ -52,5 +52,7 @@
             <Setter Property="FontFamily" Value="Microsoft YaHei"/>
             <Setter Property="FontSize" Value="14"/>
         </Style>
+        
+        <!-- 语言资源字典由App.xaml.cs动态加载 -->
     </Application.Resources>
 </Application>

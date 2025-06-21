@@ -19,6 +19,7 @@ namespace QuquPlot.Models
         private double _opacity = 1;
         private string _lineStyle = " ——  ";
         private string _sourceFileName = "";
+        private string _sourceFileFullPath = "";
         // private string _hashId = "";
         private System.Windows.Media.Color _plotColor = System.Windows.Media.Colors.Blue;
         private System.Windows.Media.SolidColorBrush _brush = new(System.Windows.Media.Colors.Blue);
@@ -28,13 +29,15 @@ namespace QuquPlot.Models
         private CurveInfo? targetCurve = null;
         private double[] originalYs = Array.Empty<double>();
         private Action? autoScaleAction;
+        private string _lengthLabel = "长度："; // 默认中文
         public string HashId { get; private set; } = string.Empty;
         public ObservableCollection<CurveInfo> OtherCurves { get; set; } = new ObservableCollection<CurveInfo>();
         private bool isOperationEnabled = true;
-        private bool isTargetCurveEnabled = false;
-        private double xMagnitude = 0;
+        private bool isTargetCurveEnabled = true;
+        private int xMagnitude = 0;
+        private int lastXMagnitude = 0;
         private double[]? modifiedXs;
-        private double lastXMagnitude = 0;
+        private bool reverseX = false;
 
         public bool IsOperationEnabled
         {
@@ -46,23 +49,39 @@ namespace QuquPlot.Models
             get => isTargetCurveEnabled;
             set { if (isTargetCurveEnabled != value) { isTargetCurveEnabled = value; OnPropertyChanged(); } }
         }
-        public CurveInfo(Action<string>? logAction = null, Action? autoScaleAction = null)
+        public CurveInfo(Action<string>? logAction = null, Action? autoScaleAction = null, string? lengthLabel = null)
         {
             _logAction = logAction ?? (s => { });
             this.autoScaleAction = autoScaleAction;
-            Log($"[构造] CurveInfo 构造: Name={_name}, logAction is null: {logAction == null}");
+            if (!string.IsNullOrEmpty(lengthLabel))
+            {
+                _lengthLabel = lengthLabel;
+            }
         }
         private void Log(string message)
         {
             _logAction?.Invoke("[CurveInfo] " + message);
         }
-        public double[] Xs { get => _xs; set { _xs = value; OnPropertyChanged(); } }
+        public double[] Xs { get => _xs; set { _xs = value; OnPropertyChanged(); OnPropertyChanged(nameof(DataPointCount)); OnPropertyChanged(nameof(SourceFileTooltip)); } }
         public double[] Ys { get => _ys; set { _ys = value; OnPropertyChanged(); } }
         public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
         public string SourceFileName
         {
-            get => GetShortFileName(_sourceFileName, 30);
+            get => GetShortFileName(_sourceFileName, 45);
             set { _sourceFileName = value; OnPropertyChanged(); }
+        }
+        public string SourceFileFullPath
+        {
+            get => _sourceFileFullPath;
+            set { _sourceFileFullPath = value; OnPropertyChanged(); OnPropertyChanged(nameof(SourceFileTooltip)); }
+        }
+        
+        /// <summary>
+        /// 源文件tooltip信息，包含文件路径和长度
+        /// </summary>
+        public string SourceFileTooltip
+        {
+            get => $"{_sourceFileFullPath}\n{_lengthLabel}{DataPointCount}";
         }
         public string OperationType
         {
@@ -121,10 +140,15 @@ namespace QuquPlot.Models
                 } 
             }
         }
-        public double XMagnitude
+        public int XMagnitude
         {
             get => xMagnitude;
-            set { if (xMagnitude != value) { xMagnitude = value; OnPropertyChanged(); OnPropertyChanged(nameof(ModifiedXs)); } }
+            set { if (xMagnitude != value) { xMagnitude = value; modifiedXs = null; OnPropertyChanged(); OnPropertyChanged(nameof(ModifiedXs)); } }
+        }
+        public bool ReverseX
+        {
+            get => reverseX;
+            set { if (reverseX != value) { reverseX = value; modifiedXs = null; OnPropertyChanged(); OnPropertyChanged(nameof(ModifiedXs)); } }
         }
         public double[] ModifiedXs
         {
@@ -132,7 +156,10 @@ namespace QuquPlot.Models
             {
                 if (modifiedXs == null || xMagnitude != lastXMagnitude)
                 {
-                    modifiedXs = Xs.Select(x => x * Math.Pow(10, xMagnitude)).ToArray();
+                    var xs = Xs.Select(x => x * Math.Pow(10, xMagnitude)).ToArray();
+                    if (ReverseX)
+                        xs = xs.Reverse().ToArray();
+                    modifiedXs = xs;
                     lastXMagnitude = xMagnitude;
                 }
                 return modifiedXs;
@@ -150,6 +177,14 @@ namespace QuquPlot.Models
                 }
             }
         }
+        
+        /// <summary>
+        /// 数据点数量（只读属性）
+        /// </summary>
+        public int DataPointCount
+        {
+            get => Xs.Length;
+        }
         public event PropertyChangedEventHandler? PropertyChanged;
         public void OnPropertyChanged([CallerMemberName] string? propertyName = null, string? debugInfo = null)
         {
@@ -162,14 +197,12 @@ namespace QuquPlot.Models
         public void SaveOriginalYs()
         {
             originalYs = Ys.ToArray();
-            Log($"[{Name}] 保存原始Ys，长度={originalYs.Length}");
         }
         public void RestoreOriginalYs()
         {
             if (originalYs != null && Ys != null && originalYs.Length == Ys.Length && !Ys.SequenceEqual(originalYs))
             {
                 Ys = originalYs.ToArray();
-                Log($"[{Name}] 恢复原始Ys，长度={Ys.Length}");
                 OnPropertyChanged(nameof(Ys));
             }
         }
@@ -178,7 +211,6 @@ namespace QuquPlot.Models
             if (Ys.Length == 0)
             {
                 HashId = Guid.NewGuid().ToString();
-                Log($"[{Name}] Ys为空，生成随机HashId={HashId}");
                 return;
             }
             using var sha256 = System.Security.Cryptography.SHA256.Create();
@@ -186,29 +218,18 @@ namespace QuquPlot.Models
             Buffer.BlockCopy(Ys, 0, bytes, 0, bytes.Length);
             var hash = sha256.ComputeHash(bytes);
             HashId = Convert.ToBase64String(hash);
-            Log($"[{Name}] 生成HashId={HashId}");
         }
         public void UpdateCurveData()
         {
-            Log($"[{Name}] UpdateCurveData: 操作类型={OperationType}, 目标曲线={TargetCurve?.Name ?? "无"}");
-            
             // 如果没有保存原始数据，先保存
             if (originalYs.Length == 0)
             {
-                Log($"[{Name}] 原始数据为空，保存当前Ys数据");
                 SaveOriginalYs();
-                Log($"[{Name}] 原始数据已保存，长度={originalYs.Length}");
-            }
-            else
-            {
-                Log($"[{Name}] 已存在原始数据，长度={originalYs.Length}");
             }
             
             if (OperationType == "无" || TargetCurve == null)
             {
-                Log($"[{Name}] 操作类型为无或目标曲线为空，恢复原始Ys");
                 RestoreOriginalYs();
-                Log($"[{Name}] 已恢复原始Ys，长度={Ys.Length}");
                 return;
             }
 
@@ -220,12 +241,8 @@ namespace QuquPlot.Models
                 for (int i = 0; i < Xs.Length; i++)
                 {
                     result[i] = originalYs[i] - targetYsInterp[i];
-                    if (i < 5 || i > Xs.Length - 5)
-                        Log($"[{Name}] 计算点 {i}: {originalYs[i]} - {targetYsInterp[i]} = {result[i]}");
                 }
                 Ys = result;
-                Log($"[{Name}] 完成数据操作，Ys已更新，长度={Ys.Length}");
-                Log($"[{Name}] 数据范围: 最小值={Ys.Min()}, 最大值={Ys.Max()}");
                 OnPropertyChanged(nameof(Ys));
                 return;
             }
@@ -237,7 +254,6 @@ namespace QuquPlot.Models
                 return;
             }
 
-            Log($"[{Name}] 开始计算新的Ys数据，数据点数量={Xs.Length}");
             var defaultResult = new double[Xs.Length];
             for (int i = 0; i < Xs.Length; i++)
             {
@@ -245,17 +261,9 @@ namespace QuquPlot.Models
                 {
                     case "减":
                         defaultResult[i] = originalYs[i] - TargetCurve!.Ys[i];
-                        if (i < 5 || i > Xs.Length - 5) // 只打印前5个和后5个数据点的值
-                        {
-                            Log($"[{Name}] 计算点 {i}: {originalYs[i]} - {TargetCurve!.Ys[i]} = {defaultResult[i]}");
-                        }
                         break;
                     case "-":
                         defaultResult[i] = originalYs[i] - TargetCurve!.Ys[i];
-                        if (i < 5 || i > Xs.Length - 5) // 只打印前5个和后5个数据点的值
-                        {
-                            Log($"[{Name}] 计算点 {i}: {originalYs[i]} - {TargetCurve!.Ys[i]} = {defaultResult[i]}");
-                        }
                         break;
                     default:
                         defaultResult[i] = originalYs[i];
@@ -263,8 +271,6 @@ namespace QuquPlot.Models
                 }
             }
             Ys = defaultResult;
-            Log($"[{Name}] 完成数据操作，Ys已更新，长度={Ys.Length}");
-            Log($"[{Name}] 数据范围: 最小值={Ys.Min()}, 最大值={Ys.Max()}");
             OnPropertyChanged(nameof(Ys));
         }
 
@@ -310,10 +316,6 @@ namespace QuquPlot.Models
                 _ => LinePattern.Solid
             };
             
-            if (_logAction != null)
-            {
-                _logAction($"线型转换: {LineStyle} -> {pattern}");
-            }
             return pattern;
         }
         public System.Drawing.Color Color => System.Drawing.Color.FromArgb(

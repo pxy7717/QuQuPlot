@@ -7,7 +7,7 @@
         xmlns:scott="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         xmlns:system="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="蛐蛐Plot" Height="700" Width="1300"
+        Title="{DynamicResource WindowTitle}" Height="700" Width="1300"
         Icon="pack://application:,,,/assets/logo.png"
         FontFamily="Microsoft YaHei">
     <Window.Resources>
@@ -225,7 +225,7 @@
             <!-- 列宽资源 -->
             <system:Double x:Key="ColWidth_Delete">30</system:Double>
             <system:Double x:Key="ColWidth_Visible">30</system:Double>
-            <system:Double x:Key="ColWidth_Color">40</system:Double>
+            <system:Double x:Key="ColWidth_Color">25</system:Double>
             <system:Double x:Key="ColWidth_Name">120</system:Double>
             <system:Double x:Key="ColWidth_Width">80</system:Double>
             <system:Double x:Key="ColWidth_Opacity">80</system:Double>
@@ -233,6 +233,8 @@
             <system:Double x:Key="ColWidth_SourceFile">300</system:Double>
             <system:Double x:Key="ColWidth_Operation">50</system:Double>
             <system:Double x:Key="ColWidth_OtherCurve">100</system:Double>
+            <system:Double x:Key="ColWidth_XMagnitude">40</system:Double>
+            <system:Double x:Key="ColWidth_Reverse">40</system:Double>
         </ResourceDictionary>
     </Window.Resources>
     
@@ -254,22 +256,11 @@
         <Popup x:Name="AboutPopup" StaysOpen="False" Placement="MousePoint" AllowsTransparency="True">
             <Border Background="#EE2b2b2b" BorderThickness="0" Padding="10">
                 <StackPanel>
-                    <TextBlock Text="蛐蛐Plot" 
-                             FontSize="16" 
-                             FontWeight="Bold" 
-                             Foreground="White" 
-                             Margin="0,0,0,10"/>
-                    <TextBlock Text="Version：0.6.0" 
-                             Foreground="White" 
-                             Margin="0,0,0,5"/>
-                    <TextBlock Text="Author：ypcypc" 
-                             Foreground="White" 
-                             Margin="0,0,0,5"/>
-                    <TextBlock Text="Email: pxy7717@hotmail.com" 
-                             Foreground="White" 
-                             Margin="0,0,0,5"/>
-                    <TextBlock Text="2025-06-15" 
-                             Foreground="White"/>
+                    <TextBlock Text="{DynamicResource WindowTitle}" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+                    <TextBlock Text="{DynamicResource Version}" Foreground="White" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Author}" Foreground="White" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Email}" Foreground="White" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Date}" Foreground="White"/>
                 </StackPanel>
             </Border>
         </Popup>
@@ -284,21 +275,21 @@
             <StackPanel Orientation="Vertical" Grid.Row="0">
                 <Button x:Name="OpenFileButton" 
                         Click="OpenFileButton_Click"
-                        ToolTip="打开" 
+                        ToolTip="{DynamicResource OpenFile}" 
                         Style="{StaticResource ToolbarButtonStyle}" 
                         Margin="0,20,0,20">
                     <Image Source="pack://application:,,,/assets/icon_open.png"/>
                 </Button>
                 <Button x:Name="SaveImageButton"
                         Click="SaveImageButton_Click"
-                        ToolTip="保存" 
+                        ToolTip="{DynamicResource SaveImage}" 
                         Style="{StaticResource ToolbarButtonStyle}" 
                         Margin="0,0,0,20">
                     <Image Source="pack://application:,,,/assets/icon_save.png"/>
                 </Button>
                 <Button x:Name="ZoomResetButton"
                         Click="ZoomResetButton_Click"
-                        ToolTip="重置缩放" 
+                        ToolTip="{DynamicResource ZoomReset}" 
                         Style="{StaticResource ToolbarButtonStyle}"
                         Margin="0,0,0,20">
                     <Image Source="pack://application:,,,/assets/icon_zoom_reset.png"/>
@@ -306,7 +297,7 @@
                 <Button x:Name="TableButton" 
                         Style="{StaticResource ToolbarButtonStyle}"
                         Click="OnTableClick"
-                        ToolTip="显示数据表格"
+                        ToolTip="{DynamicResource ShowTable}"
                         Margin="0,0,0,20">
                     <Image Source="pack://application:,,,/assets/icon_table.png"/>
                 </Button>
@@ -314,7 +305,7 @@
             <Button x:Name="AboutButton"
                     Style="{StaticResource ToolbarButtonStyle}"
                     Click="OnAboutPopupClick"
-                    ToolTip="关于"
+                    ToolTip="{DynamicResource About}"
                     Margin="0,0,0,20"
                     Grid.Row="1"
                     VerticalAlignment="Bottom">
@@ -345,11 +336,7 @@
                     Margin="0,30,0,0"
                     Visibility="Collapsed"
                     Panel.ZIndex="999">
-                <TextBlock Text="未导入重复数据"
-                        FontSize="16"
-                        FontWeight="Bold"
-                        Foreground="White"
-                        HorizontalAlignment="Center"/>
+                <TextBlock Text="{DynamicResource DuplicateCurveToast}" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
             </Border>
 
             <!-- 分隔条 -->
@@ -364,7 +351,7 @@
             <Grid x:Name="BGrid" Grid.Row="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="100"/>
+                    <RowDefinition Height="110"/>
                 </Grid.RowDefinitions>
                 
                 <!-- 区域B-1：上部分 -->
@@ -386,7 +373,7 @@
                                     <GridViewColumn Width="{StaticResource ColWidth_Delete}">
                                         <GridViewColumn.Header>
                                             <Button Click="ClearAllButton_Click"
-                                                    ToolTip="清除所有曲线"
+                                                    ToolTip="{DynamicResource ClearAll}"
                                                     Padding="2,0"
                                                     Background="Transparent"
                                                     BorderThickness="0">
@@ -417,7 +404,7 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="名称" Width="{StaticResource ColWidth_Name}">
+                                    <GridViewColumn Header="{DynamicResource Name}" Width="{StaticResource ColWidth_Name}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -427,14 +414,14 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="线宽" Width="{StaticResource ColWidth_Width}">
+                                    <GridViewColumn Header="{DynamicResource Width}" Width="{StaticResource ColWidth_Width}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Slider Minimum="1" Maximum="17" TickFrequency="4" IsSnapToTickEnabled="True" Value="{Binding Width, Mode=TwoWay}" Width="60"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="透明" Width="{StaticResource ColWidth_Opacity}">
+                                    <GridViewColumn Header="{DynamicResource Opacity}" Width="{StaticResource ColWidth_Opacity}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Slider Minimum="0.0" Maximum="1.0" Value="{Binding Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -442,7 +429,7 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="线型" Width="{StaticResource ColWidth_LineStyle}">
+                                    <GridViewColumn Header="{DynamicResource LineStyle}" Width="{StaticResource ColWidth_LineStyle}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <ComboBox SelectedValue="{Binding LineStyle, Mode=TwoWay}" 
@@ -457,20 +444,32 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="来源文件" Width="{StaticResource ColWidth_SourceFile}" DisplayMemberBinding="{Binding SourceFileName}" />
-                                    <GridViewColumn Header="计算" Width="{StaticResource ColWidth_Operation}">
+                                    <GridViewColumn Header="{DynamicResource SourceFile}" Width="{StaticResource ColWidth_SourceFile}">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding SourceFileName}" FontSize="12">
+                                                    <TextBlock.ToolTip>
+                                                        <ToolTip>
+                                                            <TextBlock Text="{Binding SourceFileTooltip}" FontSize="12"/>
+                                                        </ToolTip>
+                                                    </TextBlock.ToolTip>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="{DynamicResource Operation}" Width="{StaticResource ColWidth_Operation}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <ComboBox SelectedValue="{Binding OperationType, Mode=TwoWay}" 
                                                           SelectedValuePath="Content"
                                                           Width="60">
-                                                    <ComboBoxItem Content="无"/>
+                                                    <ComboBoxItem Content="{DynamicResource OperationNone}"/>
                                                     <ComboBoxItem Content="-"/>
                                                 </ComboBox>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="其他曲线" Width="{StaticResource ColWidth_OtherCurve}">
+                                    <GridViewColumn Header="{DynamicResource OtherCurve}" Width="{StaticResource ColWidth_OtherCurve}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <ComboBox Width="90"
@@ -487,6 +486,32 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
+                                    <GridViewColumn Width="{StaticResource ColWidth_XMagnitude}">
+                                        <GridViewColumn.Header>
+                                            <TextBlock>
+                                                10<Run BaselineAlignment="Superscript">n</Run>
+                                            </TextBlock>
+                                        </GridViewColumn.Header>
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox Text="{Binding XMagnitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                         VerticalAlignment="Center" 
+                                                         HorizontalContentAlignment="Center"
+                                                         BorderThickness="0"
+                                                         Background="Transparent"
+                                                         Width="{StaticResource ColWidth_XMagnitude}"
+                                                         PreviewTextInput="OnXMagnitudePreviewTextInput"
+                                                         ToolTip="{DynamicResource XMagnitudeTip}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="{DynamicResource Reverse}" Width="{StaticResource ColWidth_Reverse}">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding ReverseX, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Center" ToolTip="{DynamicResource ReverseTip}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
                                 </GridView>
                             </ListView.View>
                         </ListView>
@@ -497,12 +522,25 @@
                 <Grid Grid.Row="1">
                     <StackPanel Margin="10">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="X轴标签：" VerticalAlignment="Center" Width="60"/>
+                            <TextBlock Text="{DynamicResource XAxisLabel}" VerticalAlignment="Center" Width="60"/>
                             <TextBox x:Name="XAxisLabelTextBox" Width="200" Padding="5,2"/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Y轴标签：" VerticalAlignment="Center" Width="60"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Text="{DynamicResource YAxisLabel}" VerticalAlignment="Center" Width="60"/>
                             <TextBox x:Name="YAxisLabelTextBox" Width="200" Padding="5,2"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Width:" VerticalAlignment="Center" Width="60"/>
+                            <TextBox x:Name="ImageWidthTextBox" Width="80" Padding="5,2" Text="1500" Margin="0,0,10,0" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
+                            <TextBlock Text="Height:" VerticalAlignment="Center" Width="60"/>
+                            <TextBox x:Name="ImageHeightTextBox" Width="80" Padding="5,2" Text="1000" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
+                            <TextBlock Text="{DynamicResource LegendPosition}" VerticalAlignment="Center" Width="60" Margin="20,0,0,0"/>
+                            <ComboBox x:Name="LegendPositionComboBox" Width="80" Padding="5,2" SelectedIndex="0" SelectionChanged="LegendPositionComboBox_SelectionChanged">
+                                <ComboBoxItem Content="{DynamicResource LegendLowerLeft}"/>
+                                <ComboBoxItem Content="{DynamicResource LegendUpperLeft}"/>
+                                <ComboBoxItem Content="{DynamicResource LegendLowerRight}"/>
+                                <ComboBoxItem Content="{DynamicResource LegendUpperRight}"/>
+                            </ComboBox>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
@@ -519,14 +557,14 @@
             <!-- 调试区域标题栏 -->
             <Border Background="#E0E0E0" Padding="5">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="调试信息" FontWeight="Bold"/>
+                    <TextBlock Text="{DynamicResource DebugInfo}" FontWeight="Bold"/>
                     <Button x:Name="ClearDebugButton" 
-                            Content="清除" 
+                            Content="{DynamicResource Clear}" 
                             Margin="10,0,0,0" 
                             Padding="5,2"
                             Click="ClearDebugButton_Click"/>
                     <Button x:Name="CopyDebugButton" 
-                            Content="复制" 
+                            Content="{DynamicResource Copy}" 
                             Margin="5,0,0,0" 
                             Padding="5,2"
                             Click="CopyDebugButton_Click"/>
