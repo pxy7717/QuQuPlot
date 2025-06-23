@@ -45,7 +45,7 @@ namespace QuquPlot.Utils
             logAction?.Invoke($"绘制曲线: {curveInfo.Name}");
             var scatter = plot.Add.Scatter(
                 curveInfo.ModifiedXs,
-                curveInfo.Ys,
+                curveInfo.GetSmoothedYs(),
                 color: ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity));
 
             scatter.LegendText = curveInfo.Name;
@@ -162,6 +162,8 @@ namespace QuquPlot.Utils
             plot.Legend.ShadowColor = ColorUtils.ColorFromHex("#FFFFFF", 0.0);
             plot.Legend.OutlineColor = ColorUtils.ColorFromHex("#FFFFFF", 0.0);
             plot.Legend.Alignment = alignment;
+            plot.Legend.SymbolWidth = 50;
+            plot.Legend.SymbolPadding = 10;
         }
 
         /// <summary>

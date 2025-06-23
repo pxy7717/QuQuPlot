@@ -6,6 +6,8 @@ using System.Security.Cryptography;
 using System.Linq;
 using System.Windows.Media;
 using ScottPlot;
+using MathNet.Numerics;
+using MathNet.Filtering;
 
 namespace QuquPlot.Models
 {
@@ -38,6 +40,7 @@ namespace QuquPlot.Models
         private int lastXMagnitude = 0;
         private double[]? modifiedXs;
         private bool reverseX = false;
+        private int _smooth = 0; // 0-4, 默认0
 
         public bool IsOperationEnabled
         {
@@ -185,6 +188,20 @@ namespace QuquPlot.Models
         {
             get => Xs.Length;
         }
+        public int Smooth
+        {
+            get => _smooth;
+            set
+            {
+                int v = Math.Max(0, Math.Min(4, value));
+                if (_smooth != v)
+                {
+                    _smooth = v;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Ys));
+                }
+            }
+        }
         public event PropertyChangedEventHandler? PropertyChanged;
         public void OnPropertyChanged([CallerMemberName] string? propertyName = null, string? debugInfo = null)
         {
@@ -230,6 +247,7 @@ namespace QuquPlot.Models
             if (OperationType == "无" || TargetCurve == null)
             {
                 RestoreOriginalYs();
+                ApplySmoothing();
                 return;
             }
 
@@ -243,6 +261,7 @@ namespace QuquPlot.Models
                     result[i] = originalYs[i] - targetYsInterp[i];
                 }
                 Ys = result;
+                ApplySmoothing();
                 OnPropertyChanged(nameof(Ys));
                 return;
             }
@@ -271,6 +290,7 @@ namespace QuquPlot.Models
                 }
             }
             Ys = defaultResult;
+            ApplySmoothing();
             OnPropertyChanged(nameof(Ys));
         }
 
@@ -323,5 +343,148 @@ namespace QuquPlot.Models
             _plotColor.R,
             _plotColor.G,
             _plotColor.B);
+        private void ApplySmoothing()
+        {
+            if (originalYs == null || originalYs.Length == 0)
+                return;
+            if (Smooth <= 0)
+            {
+                _ys = originalYs.ToArray();
+                return;
+            }
+            int[] windowSizes = new int[] { 7, 11, 15, 21 };
+            int window = windowSizes[Math.Max(0, Math.Min(Smooth - 1, windowSizes.Length - 1))];
+            if (window >= originalYs.Length) window = originalYs.Length | 1;
+            if (window % 2 == 0) window += 1;
+            if (window < 5) window = 5;
+            int polyOrder = Math.Min(3, window - 2);
+            try
+            {
+                _ys = SavitzkyGolaySmooth(originalYs, window, polyOrder);
+            }
+            catch { _ys = originalYs.ToArray(); }
+        }
+
+        /// <summary>
+        /// 简单Savgol滤波实现
+        /// </summary>
+        private static double[] SavitzkyGolaySmooth(double[] y, int windowSize, int polyOrder)
+        {
+            // 计算卷积系数
+            int half = windowSize / 2;
+            var coeffs = SavitzkyGolayCoefficients(windowSize, polyOrder);
+            double[] result = new double[y.Length];
+            for (int i = 0; i < y.Length; i++)
+            {
+                double sum = 0;
+                for (int j = -half; j <= half; j++)
+                {
+                    int idx = i + j;
+                    if (idx < 0) idx = 0;
+                    if (idx >= y.Length) idx = y.Length - 1;
+                    sum += coeffs[j + half] * y[idx];
+                }
+                result[i] = sum;
+            }
+            return result;
+        }
+        // 计算Savgol卷积系数
+        private static double[] SavitzkyGolayCoefficients(int windowSize, int polyOrder)
+        {
+            // 仅支持polyOrder=2或3，windowSize奇数
+            // 这里用最常见的polyOrder=2的通用公式
+            // 更高阶可用线性代数法求解
+            int half = windowSize / 2;
+            var a = new double[windowSize, polyOrder + 1];
+            for (int i = -half; i <= half; i++)
+                for (int j = 0; j <= polyOrder; j++)
+                    a[i + half, j] = Math.Pow(i, j);
+            // 正规方程 (A^T A) c = A^T e0
+            var ata = new double[polyOrder + 1, polyOrder + 1];
+            var at = new double[polyOrder + 1, windowSize];
+            for (int i = 0; i <= polyOrder; i++)
+                for (int j = 0; j < windowSize; j++)
+                    at[i, j] = a[j, i];
+            for (int i = 0; i <= polyOrder; i++)
+                for (int j = 0; j <= polyOrder; j++)
+                    for (int k = 0; k < windowSize; k++)
+                        ata[i, j] += at[i, k] * a[k, j];
+            // e0 = [1,0,0,...,0]^T
+            var e0 = new double[windowSize];
+            e0[half] = 1;
+            // rhs = A^T e0
+            var rhs = new double[polyOrder + 1];
+            for (int i = 0; i <= polyOrder; i++)
+                for (int k = 0; k < windowSize; k++)
+                    rhs[i] += at[i, k] * e0[k];
+            // 解正规方程
+            var c = SolveLinear(ata, rhs);
+            // 得到卷积系数
+            var coeffs = new double[windowSize];
+            for (int n = 0; n < windowSize; n++)
+            {
+                coeffs[n] = 0;
+                for (int m = 0; m <= polyOrder; m++)
+                    coeffs[n] += a[n, m] * c[m];
+            }
+            return coeffs;
+        }
+        // 高斯消元法解线性方程组
+        private static double[] SolveLinear(double[,] A, double[] b)
+        {
+            int n = b.Length;
+            var M = new double[n, n + 1];
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                    M[i, j] = A[i, j];
+                M[i, n] = b[i];
+            }
+            for (int i = 0; i < n; i++)
+            {
+                // 主元
+                int maxRow = i;
+                for (int k = i + 1; k < n; k++)
+                    if (Math.Abs(M[k, i]) > Math.Abs(M[maxRow, i]))
+                        maxRow = k;
+                for (int k = i; k < n + 1; k++)
+                {
+                    double tmp = M[maxRow, k];
+                    M[maxRow, k] = M[i, k];
+                    M[i, k] = tmp;
+                }
+                // 消元
+                for (int k = i + 1; k < n; k++)
+                {
+                    double f = M[k, i] / M[i, i];
+                    for (int j = i; j < n + 1; j++)
+                        M[k, j] -= f * M[i, j];
+                }
+            }
+            // 回代
+            var x = new double[n];
+            for (int i = n - 1; i >= 0; i--)
+            {
+                x[i] = M[i, n] / M[i, i];
+                for (int k = i - 1; k >= 0; k--)
+                    M[k, n] -= M[k, i] * x[i];
+            }
+            return x;
+        }
+        // 获取平滑后的Ys
+        public double[] GetSmoothedYs()
+        {
+            if (_ys == null || _ys.Length < 7 || Smooth <= 0)
+                return _ys ?? Array.Empty<double>();
+            // 窗口为数据长度的百分比
+            double[] percent = new double[] { 0.01, 0.03, 0.05, 0.10 };
+            int window = (int)Math.Round(_ys.Length * percent[Math.Max(0, Math.Min(Smooth - 1, percent.Length - 1))]);
+            if (window % 2 == 0) window += 1;
+            if (window < 5) window = 5;
+            if (window >= _ys.Length) window = _ys.Length | 1;
+            int polyOrder = Math.Min(3, window - 2);
+            try { return SavitzkyGolaySmooth(_ys, window, polyOrder); }
+            catch { return _ys; }
+        }
     }
 } 

@@ -1,7 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
-    <sys:String x:Key="WindowTitle">曲线绘图</sys:String>
+    <sys:String x:Key="WindowTitle">蛐蛐Plot</sys:String>
     <sys:String x:Key="OpenFile">打开文件</sys:String>
     <sys:String x:Key="SaveImage">保存图片</sys:String>
     <sys:String x:Key="ZoomReset">重置缩放</sys:String>
@@ -33,9 +33,10 @@
     <sys:String x:Key="DebugInfo">调试信息</sys:String>
     <sys:String x:Key="Clear">清除</sys:String>
     <sys:String x:Key="Copy">复制</sys:String>
-    <sys:String x:Key="Version">Version：0.6.1</sys:String>
+    <sys:String x:Key="Version">Version：0.6.2</sys:String>
     <sys:String x:Key="Author">Author：ypcypc</sys:String>
     <sys:String x:Key="Email">Email: pxy7717@hotmail.com</sys:String>
     <sys:String x:Key="Date">2025-06</sys:String>
+    <sys:String x:Key="Smooth">圆滑</sys:String>
     <!-- 可继续添加其他界面文本 -->
 </ResourceDictionary> 

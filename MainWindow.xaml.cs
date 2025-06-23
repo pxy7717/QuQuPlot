@@ -498,32 +498,48 @@ namespace QuquPlot
 
             if (_curveMap.Values.ElementAt(idx).Plot is not ScottPlot.Plottables.Scatter scatter)
                 return;
-
+            
+            bool needRefresh = false;
             switch (e.PropertyName)
             {
                 case nameof(CurveInfo.Width):
-                    scatter.LineWidth = (float)curveInfo.Width;
-                    AppendDebugInfo($"更新线宽: {curveInfo.Width}");
+                    if (curveInfo.Width != scatter.LineWidth)
+                    {
+                        scatter.LineWidth = (float)curveInfo.Width;
+                        AppendDebugInfo($"更新线宽: {curveInfo.Width}");
+                        needRefresh = true;
+                    }
                     break;
                 case nameof(CurveInfo.Name):
                     scatter.LegendText = curveInfo.Name;
                     AppendDebugInfo($"更新名称: {curveInfo.Name}");
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.Visible):
                     scatter.IsVisible = curveInfo.Visible;
                     AppendDebugInfo($"更新可见性: {curveInfo.Visible}");
                     // 在可见性改变后重新调整坐标轴
                     PlotView.Plot.Axes.AutoScale();
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.LineStyle):
                     var pattern = curveInfo.GetLinePattern();
                     scatter.LinePattern = pattern;
                     AppendDebugInfo($"更新线型: {curveInfo.LineStyle} -> {pattern}");
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.Opacity):
+                    if (curveInfo.Opacity != scatter.Color.A)
+                    {
+                        scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
+                        AppendDebugInfo($"更新透明度: {curveInfo.Opacity}");
+                        needRefresh = true;
+                    }
+                    break;
                 case nameof(CurveInfo.PlotColor):
                     scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
                     AppendDebugInfo($"更新颜色: R={curveInfo.PlotColor.R}, G={curveInfo.PlotColor.G}, B={curveInfo.PlotColor.B}, 透明度={curveInfo.Opacity}");
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.OperationType):
                 case nameof(CurveInfo.TargetCurve):
@@ -536,23 +552,28 @@ namespace QuquPlot
                     AppendDebugInfo($"已调用 UpdateCurveData for {curveInfo.Name}");
                     UpdateOperationEnabledStates();
                     AppendDebugInfo($"完成曲线计算更新: {curveInfo.Name}");
-                    PlotView.Refresh();
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.Ys):
                     AppendDebugInfo($"更新Ys: {curveInfo.Name}");
-                    RedrawCurve(curveInfo);
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.XMagnitude):
                     AppendDebugInfo($"更新X缩放: {curveInfo.XMagnitude}");
-                    RedrawCurve(curveInfo);
+                    needRefresh = true;
                     break;
                 case nameof(CurveInfo.ReverseX):
                     AppendDebugInfo($"反转X顺序: {curveInfo.ReverseX}");
-                    RedrawCurve(curveInfo);
+                    needRefresh = true;
+                    break;
+                case nameof(CurveInfo.Smooth):
+                    AppendDebugInfo($"更新平滑: {curveInfo.Smooth}");
+                    needRefresh = true;
                     break;
             }
 
-            PlotView.Refresh();
+            if (needRefresh)
+                RedrawCurve(curveInfo);
         }
 
         // 颜色块点击，弹出Popup调色板
@@ -1307,6 +1328,12 @@ namespace QuquPlot
             double leftValue = sortedData[left];
             double rightValue = sortedData[right];
             return leftValue + (rightValue - leftValue) * (position - left);
+        }
+
+        private void CurveListView_DragLeave(object sender, DragEventArgs e)
+        {
+            RemoveInsertionAdorner();
+            _insertionIndex = -1;
         }
     }
 } 

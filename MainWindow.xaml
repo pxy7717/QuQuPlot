@@ -228,6 +228,7 @@
             <system:Double x:Key="ColWidth_Color">25</system:Double>
             <system:Double x:Key="ColWidth_Name">120</system:Double>
             <system:Double x:Key="ColWidth_Width">80</system:Double>
+            <system:Double x:Key="ColWidth_Smooth">80</system:Double>
             <system:Double x:Key="ColWidth_Opacity">80</system:Double>
             <system:Double x:Key="ColWidth_LineStyle">60</system:Double>
             <system:Double x:Key="ColWidth_SourceFile">300</system:Double>
@@ -367,7 +368,8 @@
                                   PreviewMouseLeftButtonDown="CurveListView_PreviewMouseLeftButtonDown"
                                   MouseMove="CurveListView_MouseMove"
                                   Drop="CurveListView_Drop"
-                                  DragOver="CurveListView_DragOver">
+                                  DragOver="CurveListView_DragOver"
+                                  DragLeave="CurveListView_DragLeave">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Width="{StaticResource ColWidth_Delete}">
@@ -414,6 +416,15 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
+
+                                    <GridViewColumn Header="{DynamicResource Smooth}" Width="{StaticResource ColWidth_Smooth}">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Slider Minimum="0" Maximum="4" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Smooth, Mode=TwoWay}" Width="60"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+
                                     <GridViewColumn Header="{DynamicResource Width}" Width="{StaticResource ColWidth_Width}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
@@ -421,6 +432,7 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
+                                    
                                     <GridViewColumn Header="{DynamicResource Opacity}" Width="{StaticResource ColWidth_Opacity}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
