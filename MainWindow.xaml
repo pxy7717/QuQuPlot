@@ -288,6 +288,7 @@
                         Margin="0,0,0,20">
                     <Image Source="pack://application:,,,/assets/icon_save.png"/>
                 </Button>
+                
                 <Button x:Name="ZoomResetButton"
                         Click="ZoomResetButton_Click"
                         ToolTip="{DynamicResource ZoomReset}" 
@@ -302,6 +303,21 @@
                         Margin="0,0,0,20">
                     <Image Source="pack://application:,,,/assets/icon_table.png"/>
                 </Button>
+
+                
+                <Button x:Name="SaveCurvesConfigButton"
+                        ToolTip="{DynamicResource SaveCurvesConfigTip}"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        Margin="0,100,0,20">
+                    <Image Source="pack://application:,,,/assets/icon_saveCurvesConfig.png"/>
+                </Button>
+                <Button x:Name="LoadCurvesConfigButton"
+                        ToolTip="{DynamicResource LoadCurvesConfigTip}"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        Margin="0,0,0,20">
+                    <Image Source="pack://application:,,,/assets/icon_loadCurvesConfig.png"/>
+                </Button>
+                
             </StackPanel>
             <Button x:Name="AboutButton"
                     Style="{StaticResource ToolbarButtonStyle}"
@@ -536,18 +552,32 @@
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="{DynamicResource XAxisLabel}" VerticalAlignment="Center" Width="60"/>
                             <TextBox x:Name="XAxisLabelTextBox" Width="200" Padding="5,2"/>
+                            <CheckBox x:Name="AutoScaleXCheckBox"
+                            Content="{DynamicResource AutoScaleX}" 
+                            Margin="10,0,10,0"
+                            VerticalAlignment="Center"
+                            IsChecked="True"/>
+                            <TextBox x:Name="XAxisMinTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource XAxisMinTip}"/>
+                            <TextBox x:Name="XAxisMaxTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource XAxisMaxTip}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="{DynamicResource YAxisLabel}" VerticalAlignment="Center" Width="60"/>
                             <TextBox x:Name="YAxisLabelTextBox" Width="200" Padding="5,2"/>
+                            <CheckBox x:Name="AutoScaleYCheckBox"
+                            Content="{DynamicResource AutoScaleY}"
+                            Margin="10,0,10,0"
+                            VerticalAlignment="Center"
+                            IsChecked="True"/>
+                            <TextBox x:Name="YAxisMinTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource YAxisMinTip}"/>
+                            <TextBox x:Name="YAxisMaxTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource YAxisMaxTip}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Width:" VerticalAlignment="Center" Width="60"/>
-                            <TextBox x:Name="ImageWidthTextBox" Width="80" Padding="5,2" Text="1500" Margin="0,0,10,0" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
+                            <TextBox x:Name="ImageWidthTextBox" Width="80" Padding="5,2" Text="1200" Margin="0,0,10,0" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
                             <TextBlock Text="Height:" VerticalAlignment="Center" Width="60"/>
-                            <TextBox x:Name="ImageHeightTextBox" Width="80" Padding="5,2" Text="1000" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
+                            <TextBox x:Name="ImageHeightTextBox" Width="80" Padding="5,2" Text="800" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
                             <TextBlock Text="{DynamicResource LegendPosition}" VerticalAlignment="Center" Width="60" Margin="20,0,0,0"/>
-                            <ComboBox x:Name="LegendPositionComboBox" Width="80" Padding="5,2" SelectedIndex="0" SelectionChanged="LegendPositionComboBox_SelectionChanged">
+                            <ComboBox x:Name="LegendPositionComboBox" Width="85" Padding="5,2" SelectedIndex="0" SelectionChanged="LegendPositionComboBox_SelectionChanged">
                                 <ComboBoxItem Content="{DynamicResource LegendLowerLeft}"/>
                                 <ComboBoxItem Content="{DynamicResource LegendUpperLeft}"/>
                                 <ComboBoxItem Content="{DynamicResource LegendLowerRight}"/>

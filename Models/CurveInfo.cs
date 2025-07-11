@@ -41,6 +41,7 @@ namespace QuquPlot.Models
         private double[]? modifiedXs;
         private bool reverseX = false;
         private int _smooth = 0; // 0-4, 默认0
+        public bool isStreamData = false;
 
         public bool IsOperationEnabled
         {
@@ -225,7 +226,7 @@ namespace QuquPlot.Models
         }
         public void GenerateHashId()
         {
-            if (Ys.Length == 0)
+            if (Ys.Length == 0 || isStreamData)
             {
                 HashId = Guid.NewGuid().ToString();
                 return;
@@ -486,5 +487,6 @@ namespace QuquPlot.Models
             try { return SavitzkyGolaySmooth(_ys, window, polyOrder); }
             catch { return _ys; }
         }
+        public string RawSourceFileName => _sourceFileName;
     }
 } 

@@ -26,17 +26,25 @@
     <sys:String x:Key="XAxisLabel">X Label:</sys:String>
     <sys:String x:Key="YAxisLabel">Y Label:</sys:String>
     <sys:String x:Key="LegendPosition">Legend</sys:String>
-    <sys:String x:Key="LegendLowerLeft">Lower Left</sys:String>
-    <sys:String x:Key="LegendUpperLeft">Upper Left</sys:String>
-    <sys:String x:Key="LegendLowerRight">Lower Right</sys:String>
-    <sys:String x:Key="LegendUpperRight">Upper Right</sys:String>
+    <sys:String x:Key="LegendLowerLeft">Lower L</sys:String>
+    <sys:String x:Key="LegendUpperLeft">Upper L</sys:String>
+    <sys:String x:Key="LegendLowerRight">Lower R</sys:String>
+    <sys:String x:Key="LegendUpperRight">Upper R</sys:String>
     <sys:String x:Key="DebugInfo">Debug Info</sys:String>
     <sys:String x:Key="Clear">Clear</sys:String>
     <sys:String x:Key="Copy">Copy</sys:String>
-    <sys:String x:Key="Version">Version: 0.6.2</sys:String>
+    <sys:String x:Key="Version">Version: 0.6.3</sys:String>
     <sys:String x:Key="Author">Author: ypcypc</sys:String>
     <sys:String x:Key="Email">Email: pxy7717@hotmail.com</sys:String>
-    <sys:String x:Key="Date">2025-06</sys:String>
+    <sys:String x:Key="Date">2025-07</sys:String>
     <sys:String x:Key="Smooth">Smooth</sys:String>
+    <sys:String x:Key="SaveCurvesConfigTip">Save curve config</sys:String>
+    <sys:String x:Key="LoadCurvesConfigTip">Load curve config</sys:String>
+    <sys:String x:Key="AutoScaleX">Auto X</sys:String>
+    <sys:String x:Key="AutoScaleY">Auto Y</sys:String>
+    <sys:String x:Key="XAxisMinTip">X axis minimum</sys:String>
+    <sys:String x:Key="XAxisMaxTip">X axis maximum</sys:String>
+    <sys:String x:Key="YAxisMinTip">Y axis minimum</sys:String>
+    <sys:String x:Key="YAxisMaxTip">Y axis maximum</sys:String>
     <!-- Add more UI strings as needed -->
 </ResourceDictionary> 

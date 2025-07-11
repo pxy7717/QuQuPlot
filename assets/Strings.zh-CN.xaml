@@ -33,10 +33,18 @@
     <sys:String x:Key="DebugInfo">调试信息</sys:String>
     <sys:String x:Key="Clear">清除</sys:String>
     <sys:String x:Key="Copy">复制</sys:String>
-    <sys:String x:Key="Version">Version：0.6.2</sys:String>
+    <sys:String x:Key="Version">Version：0.6.3</sys:String>
     <sys:String x:Key="Author">Author：ypcypc</sys:String>
     <sys:String x:Key="Email">Email: pxy7717@hotmail.com</sys:String>
-    <sys:String x:Key="Date">2025-06</sys:String>
+    <sys:String x:Key="Date">2025-07</sys:String>
     <sys:String x:Key="Smooth">圆滑</sys:String>
+    <sys:String x:Key="SaveCurvesConfigTip">保存曲线配置</sys:String>
+    <sys:String x:Key="LoadCurvesConfigTip">读取曲线配置</sys:String>
+    <sys:String x:Key="AutoScaleX">自动X</sys:String>
+    <sys:String x:Key="AutoScaleY">自动Y</sys:String>
+    <sys:String x:Key="XAxisMinTip">X轴最小值</sys:String>
+    <sys:String x:Key="XAxisMaxTip">X轴最大值</sys:String>
+    <sys:String x:Key="YAxisMinTip">Y轴最小值</sys:String>
+    <sys:String x:Key="YAxisMaxTip">Y轴最大值</sys:String>
     <!-- 可继续添加其他界面文本 -->
 </ResourceDictionary> 

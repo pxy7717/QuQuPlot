@@ -52,6 +52,8 @@
     <Resource Include="assets\icon_clear.png" />
     <Resource Include="assets\icon_undo.png" />
     <Resource Include="assets\icon_redo.png" />
+    <Resource Include="assets\icon_saveCurvesConfig.png" />
+    <Resource Include="assets\icon_loadCurvesConfig.png" />
   </ItemGroup>
 
   <ItemGroup>
