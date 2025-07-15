@@ -24,6 +24,7 @@ public partial class App : Application
         // 调试输出
 
         string lang = culture.StartsWith("zh", System.StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US";
+        // lang = "zh-CN";
         System.Threading.Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo(lang);
         System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo(lang);
 

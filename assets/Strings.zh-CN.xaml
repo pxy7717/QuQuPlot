@@ -23,8 +23,8 @@
     <sys:String x:Key="XMagnitudeTip">对X值进行10的n次方缩放</sys:String>
     <sys:String x:Key="Reverse">反转</sys:String>
     <sys:String x:Key="ReverseTip">反转X</sys:String>
-    <sys:String x:Key="XAxisLabel">X轴标签：</sys:String>
-    <sys:String x:Key="YAxisLabel">Y轴标签：</sys:String>
+    <sys:String x:Key="XAxisLabel">X</sys:String>
+    <sys:String x:Key="YAxisLabel">Y</sys:String>
     <sys:String x:Key="LegendPosition">图例</sys:String>
     <sys:String x:Key="LegendLowerLeft">左下</sys:String>
     <sys:String x:Key="LegendUpperLeft">左上</sys:String>
@@ -46,5 +46,10 @@
     <sys:String x:Key="XAxisMaxTip">X轴最大值</sys:String>
     <sys:String x:Key="YAxisMinTip">Y轴最小值</sys:String>
     <sys:String x:Key="YAxisMaxTip">Y轴最大值</sys:String>
+    <sys:String x:Key="Y2AxisLabel">Y2</sys:String>
+    <sys:String x:Key="Y2AxisMinTip">Y2轴最小值</sys:String>
+    <sys:String x:Key="Y2AxisMaxTip">Y2轴最大值</sys:String>
+    <sys:String x:Key="ImageWidth">宽度</sys:String>
+    <sys:String x:Key="ImageHeight">高度</sys:String>
     <!-- 可继续添加其他界面文本 -->
 </ResourceDictionary> 

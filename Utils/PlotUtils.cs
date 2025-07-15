@@ -43,59 +43,30 @@ namespace QuquPlot.Utils
         public static ScottPlot.Plottables.Scatter DrawCurve(ScottPlot.Plot plot, CurveInfo curveInfo, Action<string>? logAction = null)
         {
             logAction?.Invoke($"绘制曲线: {curveInfo.Name}");
+            // // 选择Y轴
+            var yAxis = curveInfo.Y2 ? plot.Axes.Right : plot.Axes.Left;
+            var xAxis = plot.Axes.Bottom;
+            // 如果Y2且右轴不存在，则添加
+            // if (curveInfo.Y2 && plot.Axes.Right == null)
+            // {
+            //     plot.Axes.AddRightAxis();
+            //     plot.Axes.Right.Label.Text = "Y2";
+            // }
             var scatter = plot.Add.Scatter(
                 curveInfo.ModifiedXs,
                 curveInfo.GetSmoothedYs(),
-                color: ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity));
-
+                color: ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity)
+            );
             scatter.LegendText = curveInfo.Name;
             scatter.LineWidth = (float)curveInfo.Width;
             scatter.LinePattern = curveInfo.GetLinePattern();
             scatter.IsVisible = curveInfo.Visible;
             scatter.MarkerSize = (float)curveInfo.MarkerSize;
-
-            logAction?.Invoke($"曲线属性: 线宽={curveInfo.Width}, 线型={curveInfo.LineStyle}, 可见性={curveInfo.Visible}, 标记大小={curveInfo.MarkerSize}");
+            scatter.Axes.YAxis = yAxis;
+            logAction?.Invoke($"曲线属性: 线宽={curveInfo.Width}, 线型={curveInfo.LineStyle}, 可见性={curveInfo.Visible}, 标记大小={curveInfo.MarkerSize}, Y2={curveInfo.Y2}");
             return scatter;
         }
 
-        /// <summary>
-        /// 重绘曲线
-        /// </summary>
-        /// <param name="plot">ScottPlot绘图对象</param>
-        /// <param name="curveMap">曲线映射字典</param>
-        /// <param name="curveInfo">曲线信息</param>
-        /// <param name="logAction">日志记录委托</param>
-        public static void RedrawCurve(ScottPlot.Plot plot, Dictionary<string, (CurveInfo Info, IPlottable Plot)> curveMap, CurveInfo curveInfo, Action<string>? logAction = null)
-        {
-            logAction?.Invoke($"重绘曲线: {curveInfo.Name}");
-            if (curveMap.TryGetValue(curveInfo.HashId, out var curveData))
-            {
-                plot.Remove(curveData.Plot);
-            }
-            DrawCurve(plot, curveInfo, logAction);
-            plot.Axes.AutoScale();
-            logAction?.Invoke("重绘完成");
-        }
-
-        /// <summary>
-        /// 重绘所有曲线
-        /// </summary>
-        /// <param name="plot">ScottPlot绘图对象</param>
-        /// <param name="curveMap">曲线映射字典</param>
-        /// <param name="curveInfos">曲线信息集合</param>
-        /// <param name="logAction">日志记录委托</param>
-        public static void RedrawAllCurves(ScottPlot.Plot plot, Dictionary<string, (CurveInfo Info, IPlottable Plot)> curveMap, IEnumerable<CurveInfo> curveInfos, Action<string>? logAction = null)
-        {
-            logAction?.Invoke("开始重绘所有曲线");
-            plot.Clear();
-            curveMap.Clear();
-            foreach (var curveInfo in curveInfos)
-            {
-                DrawCurve(plot, curveInfo, logAction);
-            }
-            plot.Axes.AutoScale();
-            logAction?.Invoke("重绘完成");
-        }
 
         /// <summary>
         /// 创建散点图对象
@@ -175,15 +146,70 @@ namespace QuquPlot.Utils
         /// <param name="fontName">字体名称</param>
         public static void SetAxisFonts(ScottPlot.Plot plot, double labelFontSize, double tickFontSize, string fontName = "Microsoft YaHei UI")
         {
+            plot.Axes.Bottom.FrameLineStyle.Width = 2;
+            plot.Axes.Left.FrameLineStyle.Width = 2;
+            plot.Axes.Right.FrameLineStyle.Width = 2;
+            plot.Axes.Top.FrameLineStyle.Width = 2;
+
             plot.Axes.Bottom.Label.FontName = fontName;
             plot.Axes.Left.Label.FontName = fontName;
+            plot.Axes.Right.Label.FontName = fontName;
+
+            plot.Axes.Right.Label.IsVisible = false;
+            plot.Axes.Right.Label.Rotation = (float)-90;
+
             plot.Axes.Bottom.Label.FontSize = (float)labelFontSize;
             plot.Axes.Left.Label.FontSize = (float)labelFontSize;
+            plot.Axes.Right.Label.FontSize = (float)labelFontSize;
+
+            plot.Axes.Bottom.Label.OffsetY = (float)10;
+            plot.Axes.Left.Label.OffsetX = (float)-25;
+            plot.Axes.Right.Label.OffsetX = (float)-10;
 
             plot.Axes.Bottom.TickLabelStyle.FontName = fontName;
             plot.Axes.Left.TickLabelStyle.FontName = fontName;
+            plot.Axes.Right.TickLabelStyle.FontName = fontName;
+
+            plot.Axes.Bottom.TickLabelStyle.OffsetY = (float)5;
+            plot.Axes.Left.TickLabelStyle.OffsetX = (float)-5;
+            plot.Axes.Right.TickLabelStyle.OffsetX = (float)5;
+
             plot.Axes.Bottom.TickLabelStyle.FontSize = (float)tickFontSize;
             plot.Axes.Left.TickLabelStyle.FontSize = (float)tickFontSize;
+            plot.Axes.Right.TickLabelStyle.FontSize = (float)tickFontSize;
+
+
+            plot.Axes.Bottom.MajorTickStyle.Length = 10;
+            plot.Axes.Left.MajorTickStyle.Length = 10;
+            plot.Axes.Right.MajorTickStyle.Length = 10;
+
+            plot.Axes.Bottom.MinorTickStyle.Length = 8;
+            plot.Axes.Left.MinorTickStyle.Length = 8;
+            plot.Axes.Right.MinorTickStyle.Length = 8;
+
+            plot.Axes.Bottom.MajorTickStyle.Width = 2;
+            plot.Axes.Left.MajorTickStyle.Width = 2;
+            plot.Axes.Right.MajorTickStyle.Width = 2;
+
+            plot.Axes.Bottom.MinorTickStyle.Width = (float)1.5;
+            plot.Axes.Left.MinorTickStyle.Width = (float)1.5;
+            plot.Axes.Right.MinorTickStyle.Width = (float)1.5;
+
+            ScottPlot.TickGenerators.NumericAutomatic tickGenX = new();
+            tickGenX.TickDensity = 0.5;
+            plot.Axes.Bottom.TickGenerator = tickGenX;
+
+            ScottPlot.TickGenerators.NumericAutomatic tickGenY = new();
+            tickGenY.TickDensity = 0.5;
+            plot.Axes.Left.TickGenerator = tickGenY;
+
+            ScottPlot.TickGenerators.NumericAutomatic tickGenY2 = new();
+            tickGenY2.TickDensity = 0.5;
+            plot.Axes.Right.TickGenerator = tickGenY2;
+
+            // plot.Axes.Left.TickGenerator.MaxTickCount = 10;
+            // plot.Axes.Right.TickGenerator.MaxTickCount = 10;
+            // plot.Axes.Bottom.TickGenerator.MaxTickCount = 10;
         }
     }
 } 

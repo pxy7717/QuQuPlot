@@ -21,10 +21,10 @@
     <sys:String x:Key="OperationNone">None</sys:String>
     <sys:String x:Key="OtherCurve">Target</sys:String>
     <sys:String x:Key="XMagnitudeTip">Scale X values by 10^n</sys:String>
-    <sys:String x:Key="Reverse">Invert</sys:String>
+    <sys:String x:Key="Reverse">Inv</sys:String>
     <sys:String x:Key="ReverseTip">Reverse X order</sys:String>
-    <sys:String x:Key="XAxisLabel">X Label:</sys:String>
-    <sys:String x:Key="YAxisLabel">Y Label:</sys:String>
+    <sys:String x:Key="XAxisLabel">X</sys:String>
+    <sys:String x:Key="YAxisLabel">Y</sys:String>
     <sys:String x:Key="LegendPosition">Legend</sys:String>
     <sys:String x:Key="LegendLowerLeft">Lower L</sys:String>
     <sys:String x:Key="LegendUpperLeft">Upper L</sys:String>
@@ -33,18 +33,24 @@
     <sys:String x:Key="DebugInfo">Debug Info</sys:String>
     <sys:String x:Key="Clear">Clear</sys:String>
     <sys:String x:Key="Copy">Copy</sys:String>
-    <sys:String x:Key="Version">Version: 0.6.3</sys:String>
+    <sys:String x:Key="Version">Version: 0.6.4</sys:String>
     <sys:String x:Key="Author">Author: ypcypc</sys:String>
     <sys:String x:Key="Email">Email: pxy7717@hotmail.com</sys:String>
     <sys:String x:Key="Date">2025-07</sys:String>
     <sys:String x:Key="Smooth">Smooth</sys:String>
     <sys:String x:Key="SaveCurvesConfigTip">Save curve config</sys:String>
     <sys:String x:Key="LoadCurvesConfigTip">Load curve config</sys:String>
-    <sys:String x:Key="AutoScaleX">Auto X</sys:String>
-    <sys:String x:Key="AutoScaleY">Auto Y</sys:String>
+    <sys:String x:Key="AutoScaleX">Auto</sys:String>
+    <sys:String x:Key="AutoScaleY">Auto</sys:String>
     <sys:String x:Key="XAxisMinTip">X axis minimum</sys:String>
     <sys:String x:Key="XAxisMaxTip">X axis maximum</sys:String>
     <sys:String x:Key="YAxisMinTip">Y axis minimum</sys:String>
     <sys:String x:Key="YAxisMaxTip">Y axis maximum</sys:String>
+    <sys:String x:Key="Y2AxisLabel">Y2</sys:String>
+    <sys:String x:Key="AutoScaleY2">Auto</sys:String>
+    <sys:String x:Key="Y2AxisMinTip">Y2 axis minimum</sys:String>
+    <sys:String x:Key="Y2AxisMaxTip">Y2 axis maximum</sys:String>
+    <sys:String x:Key="ImageWidth">Width</sys:String>
+    <sys:String x:Key="ImageHeight">Height</sys:String>
     <!-- Add more UI strings as needed -->
 </ResourceDictionary> 

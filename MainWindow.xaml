@@ -540,6 +540,13 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
+                                    <GridViewColumn Header="Y2" Width="30">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding Y2, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
                                 </GridView>
                             </ListView.View>
                         </ListView>
@@ -550,31 +557,41 @@
                 <Grid Grid.Row="1">
                     <StackPanel Margin="10">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="{DynamicResource XAxisLabel}" VerticalAlignment="Center" Width="60"/>
-                            <TextBox x:Name="XAxisLabelTextBox" Width="200" Padding="5,2"/>
+                            <TextBlock Text="{DynamicResource XAxisLabel}" VerticalAlignment="Center" Width="30"/>
+                            <TextBox x:Name="XAxisLabelTextBox" Width="150" Padding="5,2"/>
                             <CheckBox x:Name="AutoScaleXCheckBox"
                             Content="{DynamicResource AutoScaleX}" 
                             Margin="10,0,10,0"
                             VerticalAlignment="Center"
                             IsChecked="True"/>
-                            <TextBox x:Name="XAxisMinTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource XAxisMinTip}"/>
-                            <TextBox x:Name="XAxisMaxTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource XAxisMaxTip}"/>
+                            <TextBox x:Name="XAxisMinTextBox" Width="70" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource XAxisMinTip}"/>
+                            <TextBox x:Name="XAxisMaxTextBox" Width="70" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource XAxisMaxTip}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="{DynamicResource YAxisLabel}" VerticalAlignment="Center" Width="60"/>
-                            <TextBox x:Name="YAxisLabelTextBox" Width="200" Padding="5,2"/>
+                            <TextBlock Text="{DynamicResource YAxisLabel}" VerticalAlignment="Center" Width="30"/>
+                            <TextBox x:Name="YAxisLabelTextBox" Width="150" Padding="5,2"/>
                             <CheckBox x:Name="AutoScaleYCheckBox"
                             Content="{DynamicResource AutoScaleY}"
                             Margin="10,0,10,0"
                             VerticalAlignment="Center"
                             IsChecked="True"/>
-                            <TextBox x:Name="YAxisMinTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource YAxisMinTip}"/>
-                            <TextBox x:Name="YAxisMaxTextBox" Width="100" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource YAxisMaxTip}"/>
+                            <TextBox x:Name="YAxisMinTextBox" Width="70" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource YAxisMinTip}"/>
+                            <TextBox x:Name="YAxisMaxTextBox" Width="70" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource YAxisMaxTip}"/>
+                            <!-- Y2 -->
+                            <TextBlock Text="{DynamicResource Y2AxisLabel}" VerticalAlignment="Center" Width="30" Padding="5,2"/>
+                            <TextBox x:Name="Y2AxisLabelTextBox" Width="150" Padding="0,2"/>
+                            <CheckBox x:Name="AutoScaleY2CheckBox"
+                            Content="{DynamicResource AutoScaleY2}"
+                            Margin="10,0,10,0"
+                            VerticalAlignment="Center"
+                            IsChecked="True"/>
+                            <TextBox x:Name="Y2AxisMinTextBox" Width="70" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource Y2AxisMinTip}"/>
+                            <TextBox x:Name="Y2AxisMaxTextBox" Width="70" Padding="5,2" Margin="0,0,10,0" ToolTip="{DynamicResource Y2AxisMaxTip}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Width:" VerticalAlignment="Center" Width="60"/>
+                            <TextBlock Text="{DynamicResource ImageWidth}" VerticalAlignment="Center" Width="60"/>
                             <TextBox x:Name="ImageWidthTextBox" Width="80" Padding="5,2" Text="1200" Margin="0,0,10,0" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
-                            <TextBlock Text="Height:" VerticalAlignment="Center" Width="60"/>
+                            <TextBlock Text="{DynamicResource ImageHeight}" VerticalAlignment="Center" Width="60"/>
                             <TextBox x:Name="ImageHeightTextBox" Width="80" Padding="5,2" Text="800" PreviewTextInput="OnImageResolutionPreviewTextInput"/>
                             <TextBlock Text="{DynamicResource LegendPosition}" VerticalAlignment="Center" Width="60" Margin="20,0,0,0"/>
                             <ComboBox x:Name="LegendPositionComboBox" Width="85" Padding="5,2" SelectedIndex="0" SelectionChanged="LegendPositionComboBox_SelectionChanged">

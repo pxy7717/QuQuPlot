@@ -17,7 +17,7 @@ namespace QuquPlot.Models
         private double[] _xs = Array.Empty<double>();
         private double[] _ys = Array.Empty<double>();
         private bool _visible = true;
-        private double _width = 4;  // 默认线宽改为3
+        private double _width = 5;
         private double _opacity = 1;
         private string _lineStyle = " ——  ";
         private string _sourceFileName = "";
@@ -42,6 +42,12 @@ namespace QuquPlot.Models
         private bool reverseX = false;
         private int _smooth = 0; // 0-4, 默认0
         public bool isStreamData = false;
+        public bool Y2
+        {
+            get => _y2;
+            set { if (_y2 != value) { _y2 = value; OnPropertyChanged(); } }
+        }
+        private bool _y2 = false;
 
         public bool IsOperationEnabled
         {

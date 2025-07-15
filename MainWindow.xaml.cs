@@ -82,6 +82,13 @@ namespace QuquPlot
             YAxisMaxTextBox.KeyDown += OnYAxisRangeKeyDown;
             AutoScaleYCheckBox.Checked += OnAutoScaleYChanged;
             AutoScaleYCheckBox.Unchecked += OnAutoScaleYChanged;
+            Y2AxisLabelTextBox.TextChanged += Y2AxisLabel_TextChanged;
+            Y2AxisMinTextBox.LostFocus += OnY2AxisRangeChanged;
+            Y2AxisMaxTextBox.LostFocus += OnY2AxisRangeChanged;
+            Y2AxisMinTextBox.KeyDown += OnY2AxisRangeKeyDown;
+            Y2AxisMaxTextBox.KeyDown += OnY2AxisRangeKeyDown;
+            AutoScaleY2CheckBox.Checked += OnAutoScaleY2Changed;
+            AutoScaleY2CheckBox.Unchecked += OnAutoScaleY2Changed;
             this.DataContext = this;
 
             // 监听曲线可见性变化
@@ -109,7 +116,7 @@ namespace QuquPlot
 
                 // 设置表格四周的padding
                 // 顺序是左右下上
-                PixelPadding padding = new(150, 100, 150, 100);
+                PixelPadding padding = new(150, 170, 150, 100);
                 PlotView.Plot.Layout.Fixed(padding);
 
                 // 设置（垂直于）x轴grid样式
@@ -229,6 +236,7 @@ namespace QuquPlot
                 _realTimeServer.Start();
                 UpdateXAxisInputState(); // 启动时刷新X轴范围显示
                 UpdateYAxisInputState(); // 启动时刷新Y轴范围显示
+                UpdateY2AxisInputState(); // 启动时刷新Y2轴范围显示
             };
 
             if (!SHOW_DEBUG_PANEL)
@@ -502,6 +510,9 @@ namespace QuquPlot
                 .ToList();
             foreach (var p in toRemove)
                 PlotView.Plot.Remove(p);
+
+
+            
             
             _curveMap.Clear();
             _curveInfos.Clear();
@@ -510,6 +521,22 @@ namespace QuquPlot
                 PlotView.Plot.Axes.AutoScaleX();
             if (AutoScaleYCheckBox.IsChecked == true)
                 PlotView.Plot.Axes.AutoScaleY();
+            PlotView.Refresh();
+            AppendDebugInfo($"当前曲线数量: {_curveInfos.Count}, 曲线映射数量: {_curveMap.Count}");
+
+            // 复位坐标轴设置
+            XAxisLabelTextBox.Text = TryFindResource("XAxisLabel") as string ?? "X";
+            YAxisLabelTextBox.Text = TryFindResource("YAxisLabel") as string ?? "Y";
+            Y2AxisLabelTextBox.Text = TryFindResource("Y2AxisLabel") as string ?? "Y2";
+            AutoScaleXCheckBox.IsChecked = true;
+            AutoScaleYCheckBox.IsChecked = true;
+            AutoScaleY2CheckBox.IsChecked = true;
+            UpdateXAxisInputState();
+            UpdateYAxisInputState();
+            UpdateY2AxisInputState();
+
+            LegendPositionComboBox.SelectedIndex = 0;
+
             PlotView.Refresh();
             AppendDebugInfo($"当前曲线数量: {_curveInfos.Count}, 曲线映射数量: {_curveMap.Count}");
         }
@@ -643,6 +670,17 @@ namespace QuquPlot
                     break;
                 case nameof(CurveInfo.Smooth):
                     AppendDebugInfo($"更新平滑: {curveInfo.Smooth}");
+                    needRefresh = true;
+                    break;
+                case nameof(CurveInfo.Y2):
+                    AppendDebugInfo($"更新Y2: {curveInfo.Y2}");
+                    UpdateYAxisRightVisibility();
+                    // 新增：如果Y2轴自动缩放已勾选，自动缩放右轴并刷新输入框
+                    if (AutoScaleY2CheckBox.IsChecked == true)
+                    {
+                        
+                        UpdateY2AxisInputState();
+                    }
                     needRefresh = true;
                     break;
             }
@@ -797,6 +835,7 @@ namespace QuquPlot
         {
             PlotView.Plot.Clear();
             _curveMap.Clear();
+
             foreach (var curveInfo in _curveInfos)
             {
                 DrawCurve(curveInfo);
@@ -805,11 +844,30 @@ namespace QuquPlot
                 PlotView.Plot.Axes.AutoScaleX();
             if (AutoScaleYCheckBox.IsChecked == true)
                 PlotView.Plot.Axes.AutoScaleY();
+            if (AutoScaleY2CheckBox.IsChecked == true)
+                PlotView.Plot.Axes.AutoScaleY(PlotView.Plot.Axes.Right);
+            UpdateYAxisRightVisibility();
+            
             PlotView.Plot.MoveToTop(crosshair);
             PlotView.Refresh();
             UpdateXAxisInputState();
             UpdateYAxisInputState(); // 重绘all时同步Y轴输入框
+            UpdateY2AxisInputState(); // 重绘all时同步Y2轴输入框
             AppendDebugInfo("重绘all完成");
+
+            
+        }
+
+        private void UpdateYAxisRightVisibility()
+        {
+            bool hasY2Curve = _curveInfos.Any(ci => ci.Y2);
+            var rightAxis = PlotView.Plot.Axes.Right;
+
+            rightAxis.MajorTickStyle.Length = hasY2Curve? 10 : 0;
+            rightAxis.MinorTickStyle.Length = hasY2Curve? 5 : 0;
+            rightAxis.TickLabelStyle.IsVisible = hasY2Curve;
+            rightAxis.Label.IsVisible = hasY2Curve;
+            rightAxis.IsVisible = true;
         }
 
         private void ClearDebugButton_Click(object sender, RoutedEventArgs e)
@@ -925,6 +983,7 @@ namespace QuquPlot
                 PlotView.Refresh();
                 UpdateXAxisInputState();
                 UpdateYAxisInputState(); // 添加曲线时同步Y轴输入框
+                UpdateY2AxisInputState(); // 添加曲线时同步Y2轴输入框
                 
                 return scatter;
             }
@@ -1322,9 +1381,9 @@ namespace QuquPlot
         private string FormatNumber(double value)
         {
             if (Math.Abs(value) < 0.01 || Math.Abs(value) > 100)
-                return value.ToString("0.00E+0"); // 科学计数法，两位小数
+                return value.ToString("0.000E+0"); // 科学计数法，两位小数
             else
-                return value.ToString("0.00");    // 普通，两位小数（去掉多余的0）
+                return value.ToString("0.000");    // 普通，两位小数（去掉多余的0）
         }
 
         private void OnXMagnitudePreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -1504,6 +1563,66 @@ namespace QuquPlot
             }
         }
 
+        private void Y2AxisLabel_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (PlotView?.Plot == null) return;
+            PlotView.Plot.Axes.Right.Label.Text = Y2AxisLabelTextBox.Text;
+            PlotView.Refresh();
+        }
+
+        private void OnY2AxisRangeChanged(object? sender, RoutedEventArgs e)
+        {
+            if (double.TryParse(Y2AxisMinTextBox.Text, out double min) && double.TryParse(Y2AxisMaxTextBox.Text, out double max) && min < max)
+            {
+                PlotView.Plot.Axes.SetLimitsY(min, max, PlotView.Plot.Axes.Right);
+                PlotView.Refresh();
+            }
+        }
+        private void OnY2AxisRangeKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                OnY2AxisRangeChanged(sender, e);
+            }
+        }
+
+        private void OnAutoScaleY2Changed(object? sender, RoutedEventArgs e)
+        {
+            UpdateY2AxisInputState();
+            if (AutoScaleY2CheckBox.IsChecked == true)
+            {
+                // PlotView.Plot.Axes.Right.AutoScale();
+                PlotView.Refresh();
+                UpdateY2AxisInputState();
+            }
+            else
+            {
+                OnY2AxisRangeChanged(null, new RoutedEventArgs());
+            }
+        }
+        private void UpdateY2AxisInputState()
+        {
+            bool auto = AutoScaleY2CheckBox.IsChecked == true;
+            Y2AxisMinTextBox.IsEnabled = !auto;
+            Y2AxisMaxTextBox.IsEnabled = !auto;
+            Y2AxisMinTextBox.IsReadOnly = auto;
+            Y2AxisMaxTextBox.IsReadOnly = auto;
+            if (auto)
+            {
+                var y2Axis = PlotView.Plot.Axes.Right;
+                if (double.IsInfinity(y2Axis.Min) || double.IsInfinity(y2Axis.Max))
+                {
+                    Y2AxisMinTextBox.Text = "";
+                    Y2AxisMaxTextBox.Text = "";
+                }
+                else
+                {
+                    Y2AxisMinTextBox.Text = y2Axis.Min.ToString("G4");
+                    Y2AxisMaxTextBox.Text = y2Axis.Max.ToString("G4");
+                }
+            }
+        }
+
         private void SaveCurvesConfigButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.SaveFileDialog
@@ -1527,7 +1646,11 @@ namespace QuquPlot
                         AutoScaleX = AutoScaleXCheckBox.IsChecked == true,
                         YAxisMin = YAxisMinTextBox.Text,
                         YAxisMax = YAxisMaxTextBox.Text,
-                        AutoScaleY = AutoScaleYCheckBox.IsChecked == true
+                        AutoScaleY = AutoScaleYCheckBox.IsChecked == true,
+                        Y2AxisLabel = Y2AxisLabelTextBox.Text,
+                        Y2AxisMin = Y2AxisMinTextBox.Text,
+                        Y2AxisMax = Y2AxisMaxTextBox.Text,
+                        AutoScaleY2 = AutoScaleY2CheckBox.IsChecked == true
                     };
                     var projectConfig = new ProjectConfigSerializable
                     {
@@ -1584,6 +1707,11 @@ namespace QuquPlot
                         YAxisMaxTextBox.Text = (appSettings.YAxisMax ?? string.Empty).ToString();
                         AutoScaleYCheckBox.IsChecked = appSettings.AutoScaleY;
                         UpdateYAxisInputState();
+                        Y2AxisLabelTextBox.Text = appSettings.Y2AxisLabel;
+                        Y2AxisMinTextBox.Text = (appSettings.Y2AxisMin ?? string.Empty).ToString();
+                        Y2AxisMaxTextBox.Text = (appSettings.Y2AxisMax ?? string.Empty).ToString();
+                        AutoScaleY2CheckBox.IsChecked = appSettings.AutoScaleY2;
+                        UpdateY2AxisInputState();
                     }
                     // 恢复曲线
                     var curveConfigs = projectConfig.Curves;
@@ -1753,6 +1881,10 @@ namespace QuquPlot
             public string? YAxisMin { get; set; }
             public string? YAxisMax { get; set; }
             public bool AutoScaleY { get; set; }
+            public string? Y2AxisLabel { get; set; }
+            public string? Y2AxisMin { get; set; }
+            public string? Y2AxisMax { get; set; }
+            public bool AutoScaleY2 { get; set; }
         }
         private class ProjectConfigSerializable
         {
