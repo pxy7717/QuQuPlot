@@ -440,7 +440,8 @@
                                                          BorderThickness="0"
                                                          Background="Transparent"
                                                          HorizontalAlignment="Left"
-                                                         VerticalAlignment="Center"/>
+                                                         VerticalAlignment="Center"
+                                                         PreviewMouseLeftButtonDown="CurveNameTextBox_PreviewMouseLeftButtonDown"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>

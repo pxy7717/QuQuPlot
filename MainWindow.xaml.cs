@@ -636,6 +636,7 @@ namespace QuquPlot
                         scatter.LineWidth = (float)curveInfo.Width;
                         AppendDebugInfo($"更新线宽: {curveInfo.Width}");
                         needRefresh = true;
+                        UpdateLegends();
                     }
                     break;
                 case nameof(CurveInfo.Name):
@@ -653,6 +654,7 @@ namespace QuquPlot
                 case nameof(CurveInfo.LineStyle):
                     var pattern = curveInfo.GetLinePattern();
                     scatter.LinePattern = pattern;
+                    UpdateLegends();
                     AppendDebugInfo($"更新线型: {curveInfo.LineStyle} -> {pattern}");
                     needRefresh = true;
                     break;
@@ -661,11 +663,13 @@ namespace QuquPlot
                     {
                         scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
                         AppendDebugInfo($"更新透明度: {curveInfo.Opacity}");
+                        UpdateLegends();
                         needRefresh = true;
                     }
                     break;
                 case nameof(CurveInfo.PlotColor):
                     scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
+                    UpdateLegends();
                     AppendDebugInfo($"更新颜色: R={curveInfo.PlotColor.R}, G={curveInfo.PlotColor.G}, B={curveInfo.PlotColor.B}, 透明度={curveInfo.Opacity}");
                     needRefresh = true;
                     break;
@@ -856,7 +860,8 @@ namespace QuquPlot
             LegendItem curveLegend = new()
             {
                 LineColor = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity),
-                LineWidth = 8,
+                LineWidth = (float)curveInfo.Width,
+                LinePattern = curveInfo.GetLinePattern(),
                 LabelText = curveInfo.Name
             };
 
@@ -2144,6 +2149,27 @@ namespace QuquPlot
             double probeX = mouseCoordinates.X;
             AddProbeAtX(probeX);
             PlotView.Refresh();
+        }
+
+        // 曲线名字TextBox首次点击时全选
+        private void CurveNameTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is TextBox textBox && !textBox.IsKeyboardFocusWithin)
+            {
+                textBox.Focus();
+                textBox.SelectAll();
+                e.Handled = true;
+            }
+        }
+
+        // 曲线名字TextBox获得焦点时全选
+        private void CurveNameTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                textBox.SelectAll();
+                e.Handled = true;
+            }
         }
     }
 } 
