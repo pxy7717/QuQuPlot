@@ -16,7 +16,7 @@ namespace QuquPlot.Models
         private string _name = "";
         private double[] _xs = Array.Empty<double>();
         private double[] _ys = Array.Empty<double>();
-        private bool _visible = true;
+        public bool _visible { get; private set; } = true;
         private double _width = 5;
         private double _opacity = 1;
         private string _lineStyle = " ——  ";

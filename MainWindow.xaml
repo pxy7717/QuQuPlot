@@ -407,7 +407,18 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="" Width="{StaticResource ColWidth_Visible}">
+                                    <GridViewColumn Width="{StaticResource ColWidth_Visible}">
+                                        <GridViewColumn.Header>
+                                            <Button Click="VisibleAllButton_Click"
+                                                    ToolTip="全部可见/隐藏"
+                                                    Padding="2,0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0">
+                                                <Image Source="pack://application:,,,/assets/icon_visibleall.png"
+                                                       Width="16" Height="16"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            </Button>
+                                        </GridViewColumn.Header>
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <CheckBox IsChecked="{Binding Visible, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -428,47 +439,41 @@
                                                 <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                          BorderThickness="0"
                                                          Background="Transparent"
+                                                         HorizontalAlignment="Left"
                                                          VerticalAlignment="Center"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-
+                                    <GridViewColumn Width="{StaticResource ColWidth_XMagnitude}">
+                                        <GridViewColumn.Header>
+                                            <TextBlock>
+                                                10<Run BaselineAlignment="Superscript">n</Run>
+                                            </TextBlock>
+                                        </GridViewColumn.Header>
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox Text="{Binding XMagnitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                         VerticalAlignment="Center" 
+                                                         HorizontalContentAlignment="Center"
+                                                         BorderThickness="0"
+                                                         Background="Transparent"
+                                                         Width="{StaticResource ColWidth_XMagnitude}"
+                                                         PreviewTextInput="OnXMagnitudePreviewTextInput"
+                                                         ToolTip="{DynamicResource XMagnitudeTip}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Y2" Width="30">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding Y2, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
                                     <GridViewColumn Header="{DynamicResource Smooth}" Width="{StaticResource ColWidth_Smooth}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Slider Minimum="0" Maximum="4" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Smooth, Mode=TwoWay}" Width="60"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <GridViewColumn Header="{DynamicResource Width}" Width="{StaticResource ColWidth_Width}">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Slider Minimum="1" Maximum="17" TickFrequency="4" IsSnapToTickEnabled="True" Value="{Binding Width, Mode=TwoWay}" Width="60"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                    
-                                    <GridViewColumn Header="{DynamicResource Opacity}" Width="{StaticResource ColWidth_Opacity}">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Slider Minimum="0.0" Maximum="1.0" Value="{Binding Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                        Width="60" TickFrequency="0.2" IsSnapToTickEnabled="True"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                    <GridViewColumn Header="{DynamicResource LineStyle}" Width="{StaticResource ColWidth_LineStyle}">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <ComboBox SelectedValue="{Binding LineStyle, Mode=TwoWay}" 
-                                                          SelectedValuePath="Content"
-                                                          Width="50"
-                                                          Background="Red">
-                                                    <ComboBoxItem Content=" ——  "/>
-                                                    <ComboBoxItem Content=" — —"/>
-                                                    <ComboBoxItem Content=" - - - -"/>
-                                                    <ComboBoxItem Content=" . . . . ."/>
-                                                </ComboBox>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
@@ -514,36 +519,33 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Width="{StaticResource ColWidth_XMagnitude}">
-                                        <GridViewColumn.Header>
-                                            <TextBlock>
-                                                10<Run BaselineAlignment="Superscript">n</Run>
-                                            </TextBlock>
-                                        </GridViewColumn.Header>
+                                    <GridViewColumn Header="{DynamicResource Width}" Width="{StaticResource ColWidth_Width}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
-                                                <TextBox Text="{Binding XMagnitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                                         VerticalAlignment="Center" 
-                                                         HorizontalContentAlignment="Center"
-                                                         BorderThickness="0"
-                                                         Background="Transparent"
-                                                         Width="{StaticResource ColWidth_XMagnitude}"
-                                                         PreviewTextInput="OnXMagnitudePreviewTextInput"
-                                                         ToolTip="{DynamicResource XMagnitudeTip}"/>
+                                                <Slider Minimum="1" Maximum="17" TickFrequency="4" IsSnapToTickEnabled="True" Value="{Binding Width, Mode=TwoWay}" Width="60"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="{DynamicResource Reverse}" Width="{StaticResource ColWidth_Reverse}">
+                                    <GridViewColumn Header="{DynamicResource Opacity}" Width="{StaticResource ColWidth_Opacity}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
-                                                <CheckBox IsChecked="{Binding ReverseX, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Center" ToolTip="{DynamicResource ReverseTip}"/>
+                                                <Slider Minimum="0.0" Maximum="1.0" Value="{Binding Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                        Width="60" TickFrequency="0.2" IsSnapToTickEnabled="True"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="Y2" Width="30">
+                                    <GridViewColumn Header="{DynamicResource LineStyle}" Width="{StaticResource ColWidth_LineStyle}">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
-                                                <CheckBox IsChecked="{Binding Y2, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                <ComboBox SelectedValue="{Binding LineStyle, Mode=TwoWay}" 
+                                                          SelectedValuePath="Content"
+                                                          Width="50"
+                                                          Background="Red">
+                                                    <ComboBoxItem Content=" ——  "/>
+                                                    <ComboBoxItem Content=" — —"/>
+                                                    <ComboBoxItem Content=" - - - -"/>
+                                                    <ComboBoxItem Content=" . . . . ."/>
+                                                </ComboBox>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>

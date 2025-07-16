@@ -196,20 +196,29 @@ namespace QuquPlot.Utils
             plot.Axes.Right.MinorTickStyle.Width = (float)1.5;
 
             ScottPlot.TickGenerators.NumericAutomatic tickGenX = new();
+            tickGenX.LabelFormatter = value => MainWindow.FormatNumber(value);
+            tickGenX.MinimumTickSpacing = 100;
             tickGenX.TickDensity = 0.5;
             plot.Axes.Bottom.TickGenerator = tickGenX;
 
             ScottPlot.TickGenerators.NumericAutomatic tickGenY = new();
+            tickGenY.LabelFormatter = value => MainWindow.FormatNumber(value);
+            tickGenY.MinimumTickSpacing = 100;
             tickGenY.TickDensity = 0.5;
             plot.Axes.Left.TickGenerator = tickGenY;
 
             ScottPlot.TickGenerators.NumericAutomatic tickGenY2 = new();
+            tickGenY2.LabelFormatter = value => MainWindow.FormatNumber(value);
+            tickGenY2.MinimumTickSpacing = 100;
             tickGenY2.TickDensity = 0.5;
             plot.Axes.Right.TickGenerator = tickGenY2;
 
             // plot.Axes.Left.TickGenerator.MaxTickCount = 10;
             // plot.Axes.Right.TickGenerator.MaxTickCount = 10;
             // plot.Axes.Bottom.TickGenerator.MaxTickCount = 10;
+
+            // plot.Axes.Left.TickLabelFormatter = value => MainWindow.FormatNumber(value);
+            // plot.Axes.Right.TickLabelFormatter = value => MainWindow.FormatNumber(value);
         }
     }
 } 
