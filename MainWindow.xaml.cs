@@ -111,12 +111,12 @@ namespace QuquPlot
 
             // 3. 或者手动指定字体
             // fontStyler.Set("DejaVu Sans");
+            // PlotView.Plot.ScaleFactor = 2;
 
             this.Loaded += (s, e) =>
             {
                 _isLoaded = true;
                 PlotView!.Plot.Clear();
-                AddMouseAnnotations();
 
                 // 恢复坐标轴字体设置
                 PlotUtils.SetAxisFonts(PlotView.Plot, 32, 28);
@@ -196,16 +196,7 @@ namespace QuquPlot
                 // 设置crosshair
                 AddMouseAnnotations();
 
-                // 设置图例
-
-                PlotView.Plot.Legend.Alignment = ScottPlot.Alignment.LowerLeft;
-                mouseCoordLabel = PlotView.Plot.Add.Annotation("", ScottPlot.Alignment.UpperLeft);
-                mouseCoordLabel.LabelBorderWidth = 0;
-                mouseCoordLabel.LabelBackgroundColor = ColorUtils.ColorFromHex("#FAFAFA", 0.0);
-                mouseCoordLabel.LabelFontColor = ColorUtils.ColorFromHex("#9b9b9b", 1.0);
-                mouseCoordLabel.LabelShadowColor = ColorUtils.ColorFromHex("#000000", 0.0);
-                mouseCoordLabel.LabelFontSize = 35;
-                PlotView.Refresh();
+                // PlotView.Refresh();
 
                 // 设置初始状态：隐藏曲线设置面板
                 var middleGrid = MainGrid.Children.OfType<Grid>().FirstOrDefault(g => Grid.GetColumn(g) == 1);
@@ -437,14 +428,14 @@ namespace QuquPlot
             mouseCoordLabel.IsVisible = false;
 
             // 临时隐藏红线、marker和text
-            bool probeLineWasVisible = probeLine?.IsVisible ?? false;
-            if (probeLine != null) probeLine.IsVisible = false;
-            var markerVis = probeMarkers.Select(m => m.IsVisible).ToList();
-            for (int i = 0; i < probeMarkers.Count; i++)
-                probeMarkers[i].IsVisible = false;
-            var textVis = probeAnnotations.Select(t => t.IsVisible).ToList();
-            for (int i = 0; i < probeAnnotations.Count; i++)
-                probeAnnotations[i].IsVisible = false;
+            // bool probeLineWasVisible = probeLine?.IsVisible ?? false;
+            // if (probeLine != null) probeLine.IsVisible = false;
+            // var markerVis = probeMarkers.Select(m => m.IsVisible).ToList();
+            // for (int i = 0; i < probeMarkers.Count; i++)
+            //     probeMarkers[i].IsVisible = false;
+            // var textVis = probeAnnotations.Select(t => t.IsVisible).ToList();
+            // for (int i = 0; i < probeAnnotations.Count; i++)
+            //     probeAnnotations[i].IsVisible = false;
 
             if (dialog.ShowDialog() == true)
             {
@@ -465,11 +456,11 @@ namespace QuquPlot
             mouseCoordLabel.IsVisible = true;
 
             // 恢复红线、marker和text
-            if (probeLine != null) probeLine.IsVisible = probeLineWasVisible;
-            for (int i = 0; i < probeMarkers.Count; i++)
-                probeMarkers[i].IsVisible = markerVis[i];
-            for (int i = 0; i < probeAnnotations.Count; i++)
-                probeAnnotations[i].IsVisible = textVis[i];
+            // if (probeLine != null) probeLine.IsVisible = probeLineWasVisible;
+            // for (int i = 0; i < probeMarkers.Count; i++)
+            //     probeMarkers[i].IsVisible = markerVis[i];
+            // for (int i = 0; i < probeAnnotations.Count; i++)
+            //     probeAnnotations[i].IsVisible = textVis[i];
         }
 
         private void ZoomResetButton_Click(object sender, RoutedEventArgs e)
@@ -2066,7 +2057,8 @@ namespace QuquPlot
             crosshair = PlotView.Plot.Add.Crosshair(0, 0);
             crosshair.IsVisible = enableCrosshair;
             crosshair.LineWidth = 1;
-            crosshair.LineColor = ColorUtils.ColorFromHex("#8A8A8A", 0.8);
+            crosshair.LineColor = ColorUtils.ColorFromHex("#2b2b2b", 0.8);
+            crosshair.LinePattern = LinePattern.Dashed;
 
             mouseCoordLabel = PlotView.Plot.Add.Annotation("", ScottPlot.Alignment.UpperLeft);
             mouseCoordLabel.LabelBorderWidth = 0;
@@ -2074,6 +2066,7 @@ namespace QuquPlot
             mouseCoordLabel.LabelFontColor = ColorUtils.ColorFromHex("#9b9b9b", 1.0);
             mouseCoordLabel.LabelShadowColor = ColorUtils.ColorFromHex("#000000", 0.0);
             mouseCoordLabel.LabelFontSize = 35;
+            // mouseCoordLabel.OffsetY = -20;
         }
 
         // 新增：根据指定x值刷新探针标注
@@ -2133,11 +2126,124 @@ namespace QuquPlot
                 var valueStr = $"({FormatNumber(px)}, {FormatNumber(py)})";
                 var txt = PlotView.Plot.Add.Text(valueStr, px, py);
                 txt.LabelFontSize = 30;
-                txt.LabelBackgroundColor = ColorUtils.ColorFromHex("#f2f2f2", 0.4);
-                txt.LabelFontColor = ColorUtils.ColorFromHex("#2b2b2b", 1.0);
-                txt.Axes.YAxis = yAxis; // ScottPlot 5.x: 绑定到对应Y轴
+                txt.LabelBackgroundColor = ColorUtils.ColorFromHex("#f2f2f2", 0.6);
+                txt.LabelFontColor = ColorUtils.ToScottPlotColor(curve.PlotColor, curve.Opacity);
+                txt.Axes.YAxis = yAxis;
                 probeAnnotations.Add(txt);
             }
+            
+            // 应用智能避让算法，避免标注重叠
+            AdjustAnnotationPositions(probeAnnotations);
+        }
+
+        private void AdjustAnnotationPositions(List<ScottPlot.Plottables.Text> annotations)
+        {
+            if (annotations.Count <= 1) return;
+
+            const double MIN_DISTANCE = 1.6; // 最小间距
+            var yAxis = PlotView.Plot.Axes.Left;
+            double yMin = yAxis.Range.Min;
+            double yMax = yAxis.Range.Max;
+            double yRange = yMax - yMin;
+            double margin = yRange * 0.05; // 5%边距
+
+            double safeYMin = yMin + margin;
+            double safeYMax = yMax - margin;
+            double centerY = (safeYMin + safeYMax) / 2;
+
+            // 分组
+            var upper = annotations.Where(a => a.Location.Y >= centerY).OrderBy(a => a.Location.Y).ToList();
+            var lower = annotations.Where(a => a.Location.Y < centerY).OrderByDescending(a => a.Location.Y).ToList();
+
+
+            // 上组：从下到上推
+            for (int i = 1; i < upper.Count; i++)
+            {
+                double prevY = upper[i - 1].Location.Y;
+                double curY = upper[i].Location.Y;
+                if (curY - prevY < MIN_DISTANCE)
+                {
+                    double newY = prevY + MIN_DISTANCE;
+                    upper[i].Location = new ScottPlot.Coordinates(upper[i].Location.X, newY);
+                }
+            }
+            // 下组：从上到下推
+            for (int i = 1; i < lower.Count; i++)
+            {
+                double prevY = lower[i - 1].Location.Y;
+                double curY = lower[i].Location.Y;
+                if (prevY - curY < MIN_DISTANCE)
+                {
+                    double newY = prevY - MIN_DISTANCE;
+                    lower[i].Location = new ScottPlot.Coordinates(lower[i].Location.X, newY);
+                }
+            }
+
+            // 上组整体修正（如果超界）
+            if (upper.Count > 0)
+            {
+                double maxY = upper.Last().Location.Y;
+                if (maxY > safeYMax)
+                {
+                    double offset = maxY - safeYMax;
+                    for (int i = 0; i < upper.Count; i++)
+                    {
+                        double newY = upper[i].Location.Y - offset;
+                        upper[i].Location = new ScottPlot.Coordinates(upper[i].Location.X, newY);
+                    }
+                }
+            }
+            // 下组整体修正（如果超界）
+            if (lower.Count > 0)
+            {
+                double minY = lower.Last().Location.Y;
+                if (minY < safeYMin)
+                {
+                    double offset = safeYMin - minY;
+                    for (int i = 0; i < lower.Count; i++)
+                    {
+                        double newY = lower[i].Location.Y + offset;
+                        lower[i].Location = new ScottPlot.Coordinates(lower[i].Location.X, newY);
+                    }
+                }
+            }
+
+            // 结果验证
+            bool valid = true;
+            for (int i = 1; i < upper.Count; i++)
+            {
+                double prevY = upper[i - 1].Location.Y;
+                double curY = upper[i].Location.Y;
+                if (curY - prevY < MIN_DISTANCE - 1e-6)
+                {
+                    valid = false;
+                }
+            }
+            for (int i = 1; i < lower.Count; i++)
+            {
+                double prevY = lower[i - 1].Location.Y;
+                double curY = lower[i].Location.Y;
+                if (prevY - curY < MIN_DISTANCE - 1e-6)
+                {
+                    valid = false;
+                }
+            }
+            if (!valid)
+                AppendDebugInfo("最终仍有标注重叠，请检查数据或调整参数。");
+
+            // 假设你有 safeXMin, safeXMax
+            double safeXMin = PlotView.Plot.Axes.Bottom.Min; // 或自定义
+            double safeXMax = PlotView.Plot.Axes.Bottom.Max; // 或自定义
+            double xRange = safeXMax - safeXMin;
+            double rightThreshold = safeXMin + xRange * 4.0 / 5.0; // 右侧1/5的起点
+
+            bool isRight = annotations[0].Location.X > rightThreshold;
+            foreach (var txt in annotations)
+            {
+                txt.OffsetX = isRight ? -180 : 0;
+            }
+
+
         }
 
         private void AddProbeAtMouse(MouseButtonEventArgs e)
