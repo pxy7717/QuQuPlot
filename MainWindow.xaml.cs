@@ -35,9 +35,6 @@ namespace QuquPlot
         private Dictionary<string, (CurveInfo Info, IPlottable Plot)> _curveMap = new();
         private ObservableCollection<CurveInfo> _curveInfos = new ObservableCollection<CurveInfo>();
         public ObservableCollection<CurveInfo> CurveInfos => _curveInfos;
-        private bool isCurveListVisible = true;
-        private GridLength? lastPlotRowHeight;
-        private GridLength? lastCurveListRowHeight;
 
         private double _lastSplitterPosition = 0.5; // 默认50%的宽度给设置面板
 
@@ -55,7 +52,7 @@ namespace QuquPlot
         private Crosshair crosshair = null!;
         private const bool enableCrosshair = true;
         private bool _isLoaded;
-        private bool _isBatchLoading;
+        public bool _isBatchLoading;
 
         // 实时数据流相关成员
         private Dictionary<string, (CurveInfo Info, Scatter Plot)> _realtimeCurveMap = new();
@@ -69,6 +66,7 @@ namespace QuquPlot
         public MainWindow()
         {
             InitializeComponent();
+            btnCustom_Click(this, EventArgs.Empty);
             
             // 添加轴标签文本框的事件处理
             XAxisLabelTextBox.TextChanged += AxisLabel_TextChanged;
@@ -863,7 +861,7 @@ namespace QuquPlot
             PlotView.Refresh(); 
         }
 
-        private void RedrawAllCurves()
+        public void RedrawAllCurves()
         {
             PlotView.Plot.Clear();
             AddMouseAnnotations();
@@ -972,7 +970,7 @@ namespace QuquPlot
             DebugUtils.CopyDebug(DebugTextBox);
         }
 
-        private void AppendDebugInfo(string message)
+        public void AppendDebugInfo(string message)
         {
             DebugUtils.AppendDebugInfo(DebugTextBox, message);
         }
@@ -1579,7 +1577,7 @@ namespace QuquPlot
             _insertionIndex = -1;
         }
 
-        private void OnXAxisRangeChanged(object? sender, RoutedEventArgs e)
+        public void OnXAxisRangeChanged(object? sender, RoutedEventArgs e)
         {
             if (double.TryParse(XAxisMinTextBox.Text, out double min) && double.TryParse(XAxisMaxTextBox.Text, out double max) && min < max)
             {
@@ -1609,7 +1607,7 @@ namespace QuquPlot
                 OnXAxisRangeChanged(null, new RoutedEventArgs());
             }
         }
-        private void UpdateXAxisInputState()
+        public void UpdateXAxisInputState()
         {
             bool auto = AutoScaleXCheckBox.IsChecked == true;
             XAxisMinTextBox.IsEnabled = !auto;
@@ -1655,7 +1653,7 @@ namespace QuquPlot
                 OnYAxisRangeChanged(null, new RoutedEventArgs());
             }
         }
-        private void UpdateYAxisInputState()
+        public void UpdateYAxisInputState()
         {
             bool auto = AutoScaleYCheckBox.IsChecked == true;
             YAxisMinTextBox.IsEnabled = !auto;
@@ -1707,7 +1705,7 @@ namespace QuquPlot
                 OnY2AxisRangeChanged(null, new RoutedEventArgs());
             }
         }
-        private void UpdateY2AxisInputState()
+        public void UpdateY2AxisInputState()
         {
             bool auto = AutoScaleY2CheckBox.IsChecked == true;
             Y2AxisMinTextBox.IsEnabled = !auto;
@@ -1741,31 +1739,8 @@ namespace QuquPlot
             {
                 try
                 {
-                    var appSettings = new AppSettingsSerializable
-                    {
-                        XAxisLabel = XAxisLabelTextBox.Text,
-                        YAxisLabel = YAxisLabelTextBox.Text,
-                        ImageWidth = int.TryParse(ImageWidthTextBox.Text, out var w) ? w : 1200,
-                        ImageHeight = int.TryParse(ImageHeightTextBox.Text, out var h) ? h : 800,
-                        LegendPosition = LegendPositionComboBox.SelectedIndex,
-                        XAxisMin = XAxisMinTextBox.Text,
-                        XAxisMax = XAxisMaxTextBox.Text,
-                        AutoScaleX = AutoScaleXCheckBox.IsChecked == true,
-                        YAxisMin = YAxisMinTextBox.Text,
-                        YAxisMax = YAxisMaxTextBox.Text,
-                        AutoScaleY = AutoScaleYCheckBox.IsChecked == true,
-                        Y2AxisLabel = Y2AxisLabelTextBox.Text,
-                        Y2AxisMin = Y2AxisMinTextBox.Text,
-                        Y2AxisMax = Y2AxisMaxTextBox.Text,
-                        AutoScaleY2 = AutoScaleY2CheckBox.IsChecked == true
-                    };
-                    var projectConfig = new ProjectConfigSerializable
-                    {
-                        AppSettings = appSettings,
-                        Curves = _curveInfos.Select(ci => new CurveConfigSerializable(ci)).ToList()
-                    };
-                    var json = JsonSerializer.Serialize(projectConfig, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(dialog.FileName, json);
+                    var config = CurveConfigIO.CollectConfigFromUI(this);
+                    CurveConfigIO.SaveConfig(dialog.FileName, config);
                     AppendDebugInfo($"曲线配置已保存: {dialog.FileName}");
                 }
                 catch (Exception ex)
@@ -1787,152 +1762,11 @@ namespace QuquPlot
             {
                 try
                 {
-                    string json = File.ReadAllText(dialog.FileName);
-                    var projectConfig = JsonSerializer.Deserialize<ProjectConfigSerializable>(json);
-                    if (projectConfig == null)
-                    {
+                    var config = CurveConfigIO.LoadConfig(dialog.FileName);
+                    if (config != null)
+                        CurveConfigIO.RestoreConfigToUI(this, config);
+                    else
                         AppendDebugInfo($"配置文件无效或为空: {dialog.FileName}");
-                        return;
-                    }
-                    // 恢复AppSettings
-                    var appSettings = projectConfig.AppSettings;
-                    if (appSettings != null)
-                    {
-                        XAxisLabelTextBox.Text = appSettings.XAxisLabel;
-                        YAxisLabelTextBox.Text = appSettings.YAxisLabel;
-                        ImageWidthTextBox.Text = appSettings.ImageWidth.ToString();
-                        ImageHeightTextBox.Text = appSettings.ImageHeight.ToString();
-                        if (appSettings.LegendPosition >= 0 && appSettings.LegendPosition < LegendPositionComboBox.Items.Count)
-                            LegendPositionComboBox.SelectedIndex = appSettings.LegendPosition;
-                        XAxisMinTextBox.Text = (appSettings.XAxisMin ?? string.Empty);
-                        XAxisMaxTextBox.Text = (appSettings.XAxisMax ?? string.Empty);
-                        // 自动应用X轴范围
-                        OnXAxisRangeChanged(null, new RoutedEventArgs());
-                        AutoScaleXCheckBox.IsChecked = appSettings.AutoScaleX;
-                        UpdateXAxisInputState();
-                        YAxisMinTextBox.Text = (appSettings.YAxisMin ?? string.Empty);
-                        YAxisMaxTextBox.Text = (appSettings.YAxisMax ?? string.Empty);
-                        AutoScaleYCheckBox.IsChecked = appSettings.AutoScaleY;
-                        UpdateYAxisInputState();
-                        Y2AxisLabelTextBox.Text = appSettings.Y2AxisLabel;
-                        Y2AxisMinTextBox.Text = (appSettings.Y2AxisMin ?? string.Empty);
-                        Y2AxisMaxTextBox.Text = (appSettings.Y2AxisMax ?? string.Empty);
-                        AutoScaleY2CheckBox.IsChecked = appSettings.AutoScaleY2;
-                        UpdateY2AxisInputState();
-                    }
-                    // 恢复曲线
-                    var curveConfigs = projectConfig.Curves;
-                    if (curveConfigs == null)
-                    {
-                        AppendDebugInfo($"配置文件无曲线: {dialog.FileName}");
-                        return;
-                    }
-                    int restored = 0, failed = 0;
-                    _isBatchLoading = true;
-                    try
-                    {
-                        foreach (var cfg in curveConfigs)
-                        {
-                            string dataPath = string.IsNullOrWhiteSpace(cfg.SourceFileFullPath) ? cfg.SourceFileName : cfg.SourceFileFullPath;
-                            if (string.IsNullOrWhiteSpace(dataPath) || !File.Exists(dataPath))
-                            {
-                                AppendDebugInfo($"找不到数据文件: {dataPath}");
-                                failed++;
-                                continue;
-                            }
-                            try
-                            {
-                                // 复用已有的文件处理逻辑
-                                // 只加载数据，不添加到_plot，只生成xs,ys
-                                string ext = FileUtils.GetFileExtension(dataPath);
-                                List<string> processedLines;
-                                switch (ext)
-                                {
-                                    case ".csv":
-                                        processedLines = FileUtils.ProcessCsvFile(dataPath, AppendDebugInfo);
-                                        break;
-                                    case ".xls":
-                                    case ".xlsx":
-                                        processedLines = FileUtils.ProcessExcelFile(dataPath, AppendDebugInfo);
-                                        break;
-                                    case ".txt":
-                                        processedLines = FileUtils.ProcessTxtFile(dataPath, AppendDebugInfo);
-                                        break;
-                                    case ".s":
-                                    case ".s2p":
-                                    case ".s3p":
-                                    case ".s4p":
-                                        // S参数文件暂不支持批量恢复
-                                        AppendDebugInfo($"暂不支持S参数文件批量恢复: {dataPath}");
-                                        failed++;
-                                        continue;
-                                    default:
-                                        AppendDebugInfo($"不支持的文件类型: {ext}");
-                                        failed++;
-                                        continue;
-                                }
-                                if (processedLines.Count > 0)
-                                {
-
-                                    FileUtils.ProcessDataLines(
-                                        processedLines,
-                                        Path.GetFileName(dataPath),
-                                        AppendDebugInfo,
-                                        (label, xs, ys, src, isFirst) =>
-                                        {
-                                            var temp = new CurveInfo();
-                                            temp.Xs = xs;
-                                            temp.Ys = ys;
-                                            temp.GenerateHashId();
-                                            if (temp.HashId == cfg.HashId)
-                                            {
-                                                // 恢复设置
-                                                var ci = new CurveInfo(AppendDebugInfo, null, "长度：");
-                                                ci.Name = cfg.Name;
-                                                ci.Xs = xs;
-                                                ci.Ys = ys;
-                                                ci.Visible = cfg.Visible;
-                                                ci.Width = cfg.Width;
-                                                ci.Opacity = cfg.Opacity;
-                                                ci.LineStyle = cfg.LineStyle;
-                                                ci.SourceFileName = cfg.SourceFileName;
-                                                ci.SourceFileFullPath = cfg.SourceFileFullPath;
-                                                if (cfg.PlotColor != null && cfg.PlotColor.Length == 4)
-                                                    ci.PlotColor = Color.FromArgb((byte)cfg.PlotColor[0], (byte)cfg.PlotColor[1], (byte)cfg.PlotColor[2], (byte)cfg.PlotColor[3]);
-                                                ci.MarkerSize = cfg.MarkerSize;
-                                                ci.XMagnitude = cfg.XMagnitude;
-                                                ci.ReverseX = cfg.ReverseX;
-                                                ci.Smooth = cfg.Smooth;
-                                                ci.GenerateHashId();
-                                                // 只添加到 _curveInfos，不触发重绘
-                                                _curveInfos.Add(ci);
-                                                restored++;
-                                            }
-                                            
-                                            return null;
-                                        },
-                                        (xLabel, yLabel) => { }
-                                    );
-                                }
-                                else
-                                {
-                                    AppendDebugInfo($"数据文件无有效数据: {dataPath}");
-                                    failed++;
-                                }
-                            }
-                            catch (Exception ex2)
-                            {
-                                AppendDebugInfo($"恢复曲线失败: {cfg.Name}, 错误: {ex2.Message}");
-                                failed++;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        _isBatchLoading = false;
-                    }
-                    RedrawAllCurves(); // 只在最后重绘一次
-                    AppendDebugInfo($"曲线配置恢复完成，成功: {restored}，失败: {failed}");
                 }
                 catch (Exception ex)
                 {
@@ -1940,66 +1774,6 @@ namespace QuquPlot
                     AppendDebugInfo($"读取曲线配置失败: {ex.Message}");
                 }
             }
-        }
-
-        // 用于序列化CurveInfo的必要属性
-        private class CurveConfigSerializable
-        {
-            public string Name { get; set; } = null!;
-            public bool Visible { get; set; }
-            public double Width { get; set; }
-            public double Opacity { get; set; }
-            public string LineStyle { get; set; } = null!;
-            public string SourceFileName { get; set; } = null!;
-            public string SourceFileFullPath { get; set; } = null!;
-            public int[] PlotColor { get; set; } = Array.Empty<int>();
-            public double MarkerSize { get; set; }
-            public int XMagnitude { get; set; }
-            public bool ReverseX { get; set; }
-            public int Smooth { get; set; }
-            public string HashId { get; set; } = "";
-
-            public CurveConfigSerializable() { }
-
-            public CurveConfigSerializable(CurveInfo ci)
-            {
-                Name = ci.Name;
-                Visible = ci.Visible;
-                Width = ci.Width;
-                Opacity = ci.Opacity;
-                LineStyle = ci.LineStyle;
-                SourceFileName = ci.RawSourceFileName; // 直接用字段
-                SourceFileFullPath = ci.SourceFileFullPath; // 这个没问题
-                PlotColor = new int[] { ci.PlotColor.A, ci.PlotColor.R, ci.PlotColor.G, ci.PlotColor.B };
-                MarkerSize = ci.MarkerSize;
-                XMagnitude = ci.XMagnitude;
-                ReverseX = ci.ReverseX;
-                Smooth = ci.Smooth;
-                HashId = ci.HashId;
-            }
-        }
-        private class AppSettingsSerializable
-        {
-            public string XAxisLabel { get; set; } = "";
-            public string YAxisLabel { get; set; } = "";
-            public int ImageWidth { get; set; }
-            public int ImageHeight { get; set; }
-            public int LegendPosition { get; set; }
-            public string? XAxisMin { get; set; }
-            public string? XAxisMax { get; set; }
-            public bool AutoScaleX { get; set; }
-            public string? YAxisMin { get; set; }
-            public string? YAxisMax { get; set; }
-            public bool AutoScaleY { get; set; }
-            public string? Y2AxisLabel { get; set; }
-            public string? Y2AxisMin { get; set; }
-            public string? Y2AxisMax { get; set; }
-            public bool AutoScaleY2 { get; set; }
-        }
-        private class ProjectConfigSerializable
-        {
-            public AppSettingsSerializable AppSettings { get; set; } = new();
-            public List<CurveConfigSerializable> Curves { get; set; } = new();
         }
 
         private void VisibleAllButton_Click(object sender, RoutedEventArgs e)
@@ -2033,6 +1807,31 @@ namespace QuquPlot
             mouseCoordLabel.LabelShadowColor = ColorUtils.ColorFromHex("#000000", 0.0);
             mouseCoordLabel.LabelFontSize = 35;
             // mouseCoordLabel.OffsetY = -20;
+        }
+
+        private void btnCustom_Click(object sender, EventArgs e)
+        {
+            // clear existing menu items
+            PlotView.Menu?.AddSeparator();
+
+            // add menu items with custom actions
+            PlotView.Menu?.Add("Remove Probe", (plot) =>
+            {
+                RemoveProbe();
+                plot.PlotControl?.Refresh();
+            });
+        }
+
+        private void RemoveProbe()
+        {
+            if (probeLine != null)
+                PlotView.Plot.Remove(probeLine);
+            foreach (var txt in probeAnnotations)
+                PlotView.Plot.Remove(txt);
+            probeAnnotations.Clear();
+            foreach (var marker in probeMarkers)
+                PlotView.Plot.Remove(marker);
+            probeMarkers.Clear();
         }
 
         private void AddProbeAtX(double probeX)
