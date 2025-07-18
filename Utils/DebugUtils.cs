@@ -1,4 +1,4 @@
-using System;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace QuquPlot.Utils
@@ -33,7 +33,7 @@ namespace QuquPlot.Utils
         {
             if (!string.IsNullOrEmpty(textBox.Text))
             {
-                System.Windows.Clipboard.SetText(textBox.Text);
+                Clipboard.SetText(textBox.Text);
             }
         }
     }

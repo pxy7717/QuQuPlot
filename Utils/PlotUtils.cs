@@ -1,23 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Media;
-using ScottPlot;
 using QuquPlot.Models;
-using QuquPlot.Utils;
+using ScottPlot;
+using ScottPlot.Plottables;
+using ScottPlot.TickGenerators;
 
 namespace QuquPlot.Utils
 {
     public static class PlotUtils
     {
-        private static int _colorIndex = 0;
+        private static int _colorIndex;
 
         /// <summary>
         /// 获取下一个可用的颜色
         /// </summary>
         /// <param name="usedColors">已使用的颜色列表</param>
         /// <returns>下一个可用的颜色</returns>
-        public static ScottPlot.Color GetNextColor(IEnumerable<System.Windows.Media.Color> usedColors)
+        public static Color GetNextColor(IEnumerable<System.Windows.Media.Color> usedColors)
         {
             var usedColorsList = usedColors.ToList();
             // 先尝试找未用过的色盘颜色
@@ -40,7 +37,7 @@ namespace QuquPlot.Utils
         /// <param name="curveInfo">曲线信息</param>
         /// <param name="logAction">日志记录委托</param>
         /// <returns>绘制的散点图对象</returns>
-        public static ScottPlot.Plottables.Scatter DrawCurve(ScottPlot.Plot plot, CurveInfo curveInfo, Action<string>? logAction = null)
+        public static Scatter DrawCurve(Plot plot, CurveInfo curveInfo, Action<string>? logAction = null)
         {
             logAction?.Invoke($"绘制曲线: {curveInfo.Name}");
             // // 选择Y轴
@@ -81,7 +78,7 @@ namespace QuquPlot.Utils
         /// <param name="legendText">图例文本</param>
         /// <param name="isVisible">是否可见</param>
         /// <returns>散点图对象</returns>
-        public static ScottPlot.Plottables.Scatter CreateScatter(ScottPlot.Plot plot, double[] xs, double[] ys, ScottPlot.Color color, double opacity, double lineWidth, double markerSize, string legendText, bool isVisible)
+        public static Scatter CreateScatter(Plot plot, double[] xs, double[] ys, Color color, double opacity, double lineWidth, double markerSize, string legendText, bool isVisible)
         {
             var scatter = plot.Add.Scatter(xs, ys);
             scatter.Color = color;
@@ -97,7 +94,7 @@ namespace QuquPlot.Utils
         /// </summary>
         /// <param name="scatter">散点图对象</param>
         /// <param name="curveInfo">曲线信息</param>
-        public static void UpdateScatterProperties(ScottPlot.Plottables.Scatter scatter, CurveInfo curveInfo)
+        public static void UpdateScatterProperties(Scatter scatter, CurveInfo curveInfo)
         {
             scatter.Color = ColorUtils.ToScottPlotColor(curveInfo.PlotColor, curveInfo.Opacity);
             scatter.LineWidth = (float)curveInfo.Width;
@@ -113,7 +110,7 @@ namespace QuquPlot.Utils
         /// <param name="plot">ScottPlot绘图对象</param>
         /// <param name="xLabel">X轴标签</param>
         /// <param name="yLabel">Y轴标签</param>
-        public static void SetAxisLabels(ScottPlot.Plot plot, string xLabel, string yLabel)
+        public static void SetAxisLabels(Plot plot, string xLabel, string yLabel)
         {
             plot.XLabel(xLabel);
             plot.YLabel(yLabel);
@@ -126,7 +123,7 @@ namespace QuquPlot.Utils
         /// <param name="fontSize">字体大小</param>
         /// <param name="backgroundColor">背景颜色</param>
         /// <param name="alignment">对齐方式</param>
-        public static void SetLegendStyle(ScottPlot.Plot plot, double fontSize, ScottPlot.Color backgroundColor, ScottPlot.Alignment alignment = ScottPlot.Alignment.LowerLeft)
+        public static void SetLegendStyle(Plot plot, double fontSize, Color backgroundColor, Alignment alignment = Alignment.LowerLeft)
         {
             plot.Legend.FontSize = (float)fontSize;
             plot.Legend.BackgroundColor = backgroundColor;
@@ -144,7 +141,7 @@ namespace QuquPlot.Utils
         /// <param name="labelFontSize">标签字体大小</param>
         /// <param name="tickFontSize">刻度字体大小</param>
         /// <param name="fontName">字体名称</param>
-        public static void SetAxisFonts(ScottPlot.Plot plot, double labelFontSize, double tickFontSize, string fontName = "Microsoft YaHei UI")
+        public static void SetAxisFonts(Plot plot, double labelFontSize, double tickFontSize, string fontName = "Microsoft YaHei UI")
         {
             plot.Axes.Bottom.FrameLineStyle.Width = 2;
             plot.Axes.Left.FrameLineStyle.Width = 2;
@@ -156,23 +153,23 @@ namespace QuquPlot.Utils
             plot.Axes.Right.Label.FontName = fontName;
 
             plot.Axes.Right.Label.IsVisible = false;
-            plot.Axes.Right.Label.Rotation = (float)-90;
+            plot.Axes.Right.Label.Rotation = -90;
 
             plot.Axes.Bottom.Label.FontSize = (float)labelFontSize;
             plot.Axes.Left.Label.FontSize = (float)labelFontSize;
             plot.Axes.Right.Label.FontSize = (float)labelFontSize;
 
-            plot.Axes.Bottom.Label.OffsetY = (float)10;
-            plot.Axes.Left.Label.OffsetX = (float)-25;
-            plot.Axes.Right.Label.OffsetX = (float)-10;
+            plot.Axes.Bottom.Label.OffsetY = 10;
+            plot.Axes.Left.Label.OffsetX = -25;
+            plot.Axes.Right.Label.OffsetX = -10;
 
             plot.Axes.Bottom.TickLabelStyle.FontName = fontName;
             plot.Axes.Left.TickLabelStyle.FontName = fontName;
             plot.Axes.Right.TickLabelStyle.FontName = fontName;
 
-            plot.Axes.Bottom.TickLabelStyle.OffsetY = (float)5;
-            plot.Axes.Left.TickLabelStyle.OffsetX = (float)-5;
-            plot.Axes.Right.TickLabelStyle.OffsetX = (float)5;
+            plot.Axes.Bottom.TickLabelStyle.OffsetY = 5;
+            plot.Axes.Left.TickLabelStyle.OffsetX = -5;
+            plot.Axes.Right.TickLabelStyle.OffsetX = 5;
 
             plot.Axes.Bottom.TickLabelStyle.FontSize = (float)tickFontSize;
             plot.Axes.Left.TickLabelStyle.FontSize = (float)tickFontSize;
@@ -195,19 +192,19 @@ namespace QuquPlot.Utils
             plot.Axes.Left.MinorTickStyle.Width = (float)1.5;
             plot.Axes.Right.MinorTickStyle.Width = (float)1.5;
 
-            ScottPlot.TickGenerators.NumericAutomatic tickGenX = new();
+            NumericAutomatic tickGenX = new();
             tickGenX.LabelFormatter = value => MainWindow.FormatNumber(value);
             tickGenX.MinimumTickSpacing = 100;
             tickGenX.TickDensity = 0.5;
             plot.Axes.Bottom.TickGenerator = tickGenX;
 
-            ScottPlot.TickGenerators.NumericAutomatic tickGenY = new();
+            NumericAutomatic tickGenY = new();
             tickGenY.LabelFormatter = value => MainWindow.FormatNumber(value);
             tickGenY.MinimumTickSpacing = 100;
             tickGenY.TickDensity = 0.5;
             plot.Axes.Left.TickGenerator = tickGenY;
 
-            ScottPlot.TickGenerators.NumericAutomatic tickGenY2 = new();
+            NumericAutomatic tickGenY2 = new();
             tickGenY2.LabelFormatter = value => MainWindow.FormatNumber(value);
             tickGenY2.MinimumTickSpacing = 100;
             tickGenY2.TickDensity = 0.5;

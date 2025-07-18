@@ -1,13 +1,11 @@
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using System.Linq;
 using System.Windows.Media;
 using ScottPlot;
-using MathNet.Numerics;
-using MathNet.Filtering;
+using Color = System.Windows.Media.Color;
+using Colors = System.Windows.Media.Colors;
 
 namespace QuquPlot.Models
 {
@@ -23,12 +21,12 @@ namespace QuquPlot.Models
         private string _sourceFileName = "";
         private string _sourceFileFullPath = "";
         // private string _hashId = "";
-        private System.Windows.Media.Color _plotColor = System.Windows.Media.Colors.Blue;
-        private System.Windows.Media.SolidColorBrush _brush = new(System.Windows.Media.Colors.Blue);
+        private Color _plotColor = Colors.Blue;
+        private SolidColorBrush _brush = new(Colors.Blue);
         private readonly Action<string>? _logAction;
-        private double _markerSize = 0;  // 默认标记大小为0
+        private double _markerSize;  // 默认标记大小为0
         private string operationType = "无";
-        private CurveInfo? targetCurve = null;
+        private CurveInfo? targetCurve;
         private double[] originalYs = Array.Empty<double>();
         private Action? autoScaleAction;
         private string _lengthLabel = "长度："; // 默认中文
@@ -36,18 +34,18 @@ namespace QuquPlot.Models
         public ObservableCollection<CurveInfo> OtherCurves { get; set; } = new ObservableCollection<CurveInfo>();
         private bool isOperationEnabled = true;
         private bool isTargetCurveEnabled = true;
-        private int xMagnitude = 0;
-        private int lastXMagnitude = 0;
+        private int xMagnitude;
+        private int lastXMagnitude;
         private double[]? modifiedXs;
-        private bool reverseX = false;
-        private int _smooth = 0; // 0-4, 默认0
+        private bool reverseX;
+        private int _smooth; // 0-4, 默认0
         public bool isStreamData = false;
         public bool Y2
         {
             get => _y2;
             set { if (_y2 != value) { _y2 = value; OnPropertyChanged(); } }
         }
-        private bool _y2 = false;
+        private bool _y2;
 
         public bool IsOperationEnabled
         {
@@ -117,13 +115,13 @@ namespace QuquPlot.Models
             if (string.IsNullOrEmpty(name) || name.Length <= maxLen) return name;
             return "..." + name.Substring(name.Length - maxLen);
         }
-        public System.Windows.Media.Color PlotColor
+        public Color PlotColor
         {
             get => _plotColor;
             set 
             { 
                 _plotColor = value; 
-                _brush = new System.Windows.Media.SolidColorBrush(value);
+                _brush = new SolidColorBrush(value);
                 OnPropertyChanged(); 
                 OnPropertyChanged(nameof(Brush)); 
             }
@@ -141,7 +139,7 @@ namespace QuquPlot.Models
             get => _lineStyle;
             set 
             { 
-                string newValue = value?.ToString() ?? " ——  ";
+                string newValue = value ?? " ——  ";
                 if (_lineStyle != newValue) 
                 { 
                     _lineStyle = newValue; 
@@ -183,7 +181,7 @@ namespace QuquPlot.Models
                 if (_markerSize != value)
                 {
                     _markerSize = value;
-                    OnPropertyChanged(nameof(MarkerSize));
+                    OnPropertyChanged();
                 }
             }
         }
@@ -237,7 +235,7 @@ namespace QuquPlot.Models
                 HashId = Guid.NewGuid().ToString();
                 return;
             }
-            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            using var sha256 = SHA256.Create();
             var bytes = new byte[Ys.Length * sizeof(double)];
             Buffer.BlockCopy(Ys, 0, bytes, 0, bytes.Length);
             var hash = sha256.ComputeHash(bytes);
@@ -359,7 +357,7 @@ namespace QuquPlot.Models
                 _ys = originalYs.ToArray();
                 return;
             }
-            int[] windowSizes = new int[] { 7, 11, 15, 21 };
+            int[] windowSizes = { 7, 11, 15, 21 };
             int window = windowSizes[Math.Max(0, Math.Min(Smooth - 1, windowSizes.Length - 1))];
             if (window >= originalYs.Length) window = originalYs.Length | 1;
             if (window % 2 == 0) window += 1;
@@ -437,14 +435,14 @@ namespace QuquPlot.Models
             return coeffs;
         }
         // 高斯消元法解线性方程组
-        private static double[] SolveLinear(double[,] A, double[] b)
+        private static double[] SolveLinear(double[,] a, double[] b)
         {
             int n = b.Length;
             var M = new double[n, n + 1];
             for (int i = 0; i < n; i++)
             {
                 for (int j = 0; j < n; j++)
-                    M[i, j] = A[i, j];
+                    M[i, j] = a[i, j];
                 M[i, n] = b[i];
             }
             for (int i = 0; i < n; i++)
@@ -484,7 +482,7 @@ namespace QuquPlot.Models
             if (_ys == null || _ys.Length < 7 || Smooth <= 0)
                 return _ys ?? Array.Empty<double>();
             // 窗口为数据长度的百分比
-            double[] percent = new double[] { 0.01, 0.03, 0.05, 0.10 };
+            double[] percent = { 0.01, 0.03, 0.05, 0.10 };
             int window = (int)Math.Round(_ys.Length * percent[Math.Max(0, Math.Min(Smooth - 1, percent.Length - 1))]);
             if (window % 2 == 0) window += 1;
             if (window < 5) window = 5;

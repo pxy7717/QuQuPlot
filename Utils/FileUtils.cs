@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Data;
+using System.Text;
 using ExcelDataReader;
-using QuquPlot.Models;
-using System.Windows;
 
 namespace QuquPlot.Utils
 {
@@ -236,7 +231,7 @@ namespace QuquPlot.Utils
             logAction?.Invoke($"开始处理Excel文件: {Path.GetFileName(filePath)}");
             try
             {
-                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
                 using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read);
                 using var reader = ExcelReaderFactory.CreateReader(stream);
                 var result = reader.AsDataSet();
@@ -313,7 +308,7 @@ namespace QuquPlot.Utils
 
             if (firstDataIndex >= lastDataIndex)
             {
-                logAction?.Invoke($"未找到有效数据");
+                logAction?.Invoke("未找到有效数据");
                 return false;
             }
 

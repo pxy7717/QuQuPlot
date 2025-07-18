@@ -33,7 +33,7 @@
     <sys:String x:Key="DebugInfo">Debug Info</sys:String>
     <sys:String x:Key="Clear">Clear</sys:String>
     <sys:String x:Key="Copy">Copy</sys:String>
-    <sys:String x:Key="Version">Version: 0.6.4</sys:String>
+    <sys:String x:Key="Version">Version: 0.6.5</sys:String>
     <sys:String x:Key="Author">Author: ypcypc</sys:String>
     <sys:String x:Key="Email">Email: pxy7717@hotmail.com</sys:String>
     <sys:String x:Key="Date">2025-07</sys:String>
