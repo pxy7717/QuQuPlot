@@ -391,6 +391,35 @@ namespace QuquPlot
                 YAxisLabelTextBox.Text = yLabel;
         }
 
+        /// <summary>
+        /// 保存当前PlotView图片到指定文件，自动处理crosshair和坐标标签的可见性
+        /// </summary>
+        private void SaveCurrentPlotImage(string fileName, int width, int height, bool showDebug = true)
+        {
+            // 临时禁用crosshair和mouseCoordLabel
+            crosshair.IsVisible = false;
+            mouseCoordLabel.IsVisible = false;
+            try
+            {
+                PlotView.Plot.SavePng(fileName, width, height);
+                if (showDebug)
+                    AppendDebugInfo($"图片已保存: {fileName}, 分辨率: {width}x{height}");
+            }
+            catch (Exception ex)
+            {
+                if (showDebug)
+                {
+                    MessageBox.Show($"保存图片时出错：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    AppendDebugInfo($"保存图片失败: {ex.Message}");
+                }
+            }
+            finally
+            {
+                crosshair.IsVisible = enableCrosshair;
+                mouseCoordLabel.IsVisible = true;
+            }
+        }
+
         private void SaveImageButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new SaveFileDialog
@@ -414,44 +443,10 @@ namespace QuquPlot
                 return;
             }
 
-            // 临时禁用crosshair和mouseCoordLabel
-            crosshair.IsVisible = false;
-            mouseCoordLabel.IsVisible = false;
-
-            // 临时隐藏红线、marker和text
-            // bool probeLineWasVisible = probeLine?.IsVisible ?? false;
-            // if (probeLine != null) probeLine.IsVisible = false;
-            // var markerVis = probeMarkers.Select(m => m.IsVisible).ToList();
-            // for (int i = 0; i < probeMarkers.Count; i++)
-            //     probeMarkers[i].IsVisible = false;
-            // var textVis = probeAnnotations.Select(t => t.IsVisible).ToList();
-            // for (int i = 0; i < probeAnnotations.Count; i++)
-            //     probeAnnotations[i].IsVisible = false;
-
             if (dialog.ShowDialog() == true)
             {
-                try
-                {
-                    PlotView.Plot.SavePng(dialog.FileName, width, height);
-                    AppendDebugInfo($"图片已保存: {dialog.FileName}, 分辨率: {width}x{height}");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"保存图片时出错：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                    AppendDebugInfo($"保存图片失败: {ex.Message}");
-                }
+                SaveCurrentPlotImage(dialog.FileName, width, height, true);
             }
-
-            // 恢复crosshair和mouseCoordLabel
-            crosshair.IsVisible = enableCrosshair;
-            mouseCoordLabel.IsVisible = true;
-
-            // 恢复红线、marker和text
-            // if (probeLine != null) probeLine.IsVisible = probeLineWasVisible;
-            // for (int i = 0; i < probeMarkers.Count; i++)
-            //     probeMarkers[i].IsVisible = markerVis[i];
-            // for (int i = 0; i < probeAnnotations.Count; i++)
-            //     probeAnnotations[i].IsVisible = textVis[i];
         }
 
         private void ZoomResetButton_Click(object sender, RoutedEventArgs e)
@@ -1743,6 +1738,15 @@ namespace QuquPlot
                     var config = CurveConfigIO.CollectConfigFromUI(this);
                     CurveConfigIO.SaveConfig(dialog.FileName, config);
                     AppendDebugInfo($"曲线配置已保存: {dialog.FileName}");
+
+                    // 自动保存同名图片
+                    string imageFile = System.IO.Path.ChangeExtension(dialog.FileName, ".png");
+                    if (!int.TryParse(ImageWidthTextBox.Text, out int width) || width <= 0)
+                        width = 1200;
+                    if (!int.TryParse(ImageHeightTextBox.Text, out int height) || height <= 0)
+                        height = 800;
+                    SaveCurrentPlotImage(imageFile, width, height, false);
+                    AppendDebugInfo($"自动保存图片: {imageFile}, 分辨率: {width}x{height}");
                 }
                 catch (Exception ex)
                 {
