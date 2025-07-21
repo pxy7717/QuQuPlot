@@ -534,6 +534,7 @@ namespace QuquPlot
                 }
                 // 在删除曲线后重新调整坐标轴
                 AutoScaleAllVisibleAxes();
+                UpdateLegends();
                 PlotView.Refresh();
                 AppendDebugInfo($"当前曲线数量: {_curveInfos.Count}, 曲线映射数量: {_curveMap.Count}");
             }
@@ -1826,6 +1827,7 @@ namespace QuquPlot
         {
             if (probeLine != null)
                 PlotView.Plot.Remove(probeLine);
+            probeLine = null;
             foreach (var txt in probeAnnotations)
                 PlotView.Plot.Remove(txt);
             probeAnnotations.Clear();
